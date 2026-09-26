@@ -1,0 +1,64 @@
+/* Editorial Typography System */
+body {
+  font-family: var(--font-serif);
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  margin-top: 0;
+}
+
+.site-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ui-text,
+.nav-link,
+.badge,
+.tag-chip,
+.meta-item,
+button,
+input,
+textarea {
+  font-family: var(--font-sans);
+}
+
+.code-font,
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
+/* Subtle Link underline style */
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.editorial-link {
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--accent-glow);
+  transition: all var(--transition-fast);
+}
+
+.editorial-link:hover {
+  text-decoration-color: var(--accent-primary);
+  color: var(--accent-hover);
+}
