@@ -77,8 +77,8 @@ export default function Navbar({
             <Feather size={19} className="brand-feather" />
           </div>
           <div className="brand-text">
-            <span className="brand-name">墨语</span>
-            <span className="brand-sub">Ink & Thought</span>
+            <span className="brand-name">博客随笔</span>
+            <span className="brand-sub">思考自留地</span>
           </div>
         </div>
 
