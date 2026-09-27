@@ -31,7 +31,7 @@ export default function ChallengeSection() {
   const [selectedDayDetail, setSelectedDayDetail] = useState(null);
 
   // Form states
-  const [logType, setLogType] = useState('💡 爽点或小发现');
+  const [logType, setLogType] = useState('📘 雅思实操 (卡点/招数)');
   const [logTitle, setLogTitle] = useState('');
   const [logNote, setLogNote] = useState('');
 
@@ -104,12 +104,12 @@ export default function ChallengeSection() {
       <div className="section-intro">
         <div className="section-title-wrap">
           <span className="section-pretitle">PUBLIC PLEDGE · 公开挑战与誓约</span>
-          <h1 className="section-title">21天 AI 雅思备战挑战</h1>
+          <h1 className="section-title">21天 AI 雅思备战与灵感挑战</h1>
         </div>
         <p className="section-desc">
           在新时代，一个不报班、不请外教的普通人，纯靠 AI 能在短期内把雅思学到什么水平？
-          <strong> 30 天周期内，有效打卡满 21 天即宣告通关！</strong>
-          预设 9 天免死休整期，不求完美，但求持续推进。
+          <strong>每日双轨推进：① 📘 雅思实操（1条卡点或招数）；② ✨ 灵感速记（1条思想闪念）。</strong>
+          30 天内有效打卡满 21 天即宣告通关，预设 9 天免死休整期，绝不搞一票否决的完美主义！
         </p>
       </div>
 
@@ -164,7 +164,7 @@ export default function ChallengeSection() {
             )}
           </div>
           <div className="metric-sub">
-            {isTodayCompleted ? '已稳稳打卡 1 次' : '二选一：1个卡点或发现'}
+            {isTodayCompleted ? '今日双轨已稳稳打卡' : '雅思实操 + 灵感速记'}
           </div>
         </div>
       </div>
@@ -189,28 +189,28 @@ export default function ChallengeSection() {
       <div className="challenge-rules-card">
         <div className="rules-header">
           <Compass size={18} className="rules-icon" />
-          <h3>挑战游戏规则与容错契约</h3>
+          <h3>挑战核心打卡清单与容错契约</h3>
         </div>
         <div className="rules-grid">
           <div className="rule-item">
             <span className="rule-badge">01</span>
             <div>
-              <strong>极简二选一及格线</strong>
-              <p>不限字数、不设门槛。当天只记一个具体卡点或一个小发现，配 1~2 句话即可交卷。</p>
+              <strong>📘 雅思实操（每日核心及格线）</strong>
+              <p>每天至少 1 条真实发生的做题卡点或试出的 AI 提分招数（配 1~2 句大白话或截图）。完成此项即 100 分通关！</p>
             </div>
           </div>
           <div className="rule-item">
             <span className="rule-badge">02</span>
             <div>
-              <strong>预设 9 天免死容错</strong>
-              <p>30 天内只要达成 21 天就算大获全胜。生病、加班随便休，绝不因为断更一天而放弃。</p>
+              <strong>✨ 灵感速记（思维双满贯）</strong>
+              <p>每天至少 1 条思想闪念、读书金句或生活顿悟。两项加起来不到 100 字，耗时 5 分钟以内。</p>
             </div>
           </div>
           <div className="rule-item">
             <span className="rule-badge">03</span>
             <div>
-              <strong>全网公开透明记录</strong>
-              <p>Building in Public。把打卡与思考全量沉淀在独立博客与 GitHub，见证真实成长。</p>
+              <strong>🛡️ 预设 9 天免死容错</strong>
+              <p>30 天周期内累计满 21 天就算大胜。加班生病随便休，彻底消除断更内耗！</p>
             </div>
           </div>
         </div>
@@ -240,17 +240,24 @@ export default function ChallengeSection() {
               <div className="type-buttons">
                 <button
                   type="button"
-                  className={`type-btn ${logType === '💡 爽点或小发现' ? 'active' : ''}`}
-                  onClick={() => setLogType('💡 爽点或小发现')}
+                  className={`type-btn ${logType === '📘 雅思实操 (卡点/招数)' ? 'active' : ''}`}
+                  onClick={() => setLogType('📘 雅思实操 (卡点/招数)')}
                 >
-                  💡 爽点或小发现
+                  📘 雅思实操 (卡点/招数)
                 </button>
                 <button
                   type="button"
-                  className={`type-btn ${logType === '⚠️ 具体卡点与坑' ? 'active' : ''}`}
-                  onClick={() => setLogType('⚠️ 具体卡点与坑')}
+                  className={`type-btn ${logType === '✨ 灵感速记 (闪念/顿悟)' ? 'active' : ''}`}
+                  onClick={() => setLogType('✨ 灵感速记 (闪念/顿悟)')}
                 >
-                  ⚠️ 具体卡点与坑
+                  ✨ 灵感速记 (闪念/顿悟)
+                </button>
+                <button
+                  type="button"
+                  className={`type-btn ${logType === '🌟 双轨双卡 (雅思+速记)' ? 'active' : ''}`}
+                  onClick={() => setLogType('🌟 双轨双卡 (雅思+速记)')}
+                >
+                  🌟 双轨双卡 (雅思+速记)
                 </button>
               </div>
             </div>
