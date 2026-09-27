@@ -10,9 +10,10 @@ import {
   Send,
   Clock,
   Compass,
-  Zap,
   Lock,
-  ChevronRight
+  Star,
+  ExternalLink,
+  BookOpen
 } from 'lucide-react';
 import { initialChallengeConfig, initialChallengeLogs } from '../content/challengeData';
 
@@ -20,7 +21,13 @@ export default function ChallengeSection() {
   const [logs, setLogs] = useState(() => {
     try {
       const saved = localStorage.getItem('ink_challenge_logs');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // If first item doesn't have ieltsTitle, migrate or merge with initial
+          return parsed;
+        }
+      }
     } catch (e) {
       console.error(e);
     }
@@ -28,12 +35,12 @@ export default function ChallengeSection() {
   });
 
   const [showForm, setShowForm] = useState(false);
-  const [selectedDayDetail, setSelectedDayDetail] = useState(null);
+  const [selectedDayDetail, setSelectedDayDetail] = useState(logs[0] || null);
 
-  // Form states
-  const [logType, setLogType] = useState('📘 雅思实操 (卡点/招数)');
-  const [logTitle, setLogTitle] = useState('');
-  const [logNote, setLogNote] = useState('');
+  // Form states - separate inputs for separate tracks
+  const [ieltsTitle, setIeltsTitle] = useState('');
+  const [ieltsNote, setIeltsNote] = useState('');
+  const [thoughtNote, setThoughtNote] = useState('');
 
   const completedDays = logs.length;
   const targetDays = initialChallengeConfig.targetDays;
@@ -55,7 +62,10 @@ export default function ChallengeSection() {
 
   const handleAddLog = (e) => {
     e.preventDefault();
-    if (!logNote.trim()) return;
+    if (!ieltsNote.trim()) {
+      alert('请至少填写今天的【雅思实操卡点或招数】，作为每日及格保底！');
+      return;
+    }
 
     const nextDayNum = logs.length + 1;
     if (nextDayNum > targetDays) {
@@ -63,26 +73,61 @@ export default function ChallengeSection() {
       return;
     }
 
+    const hasThought = !!thoughtNote.trim();
     const newLog = {
       day: nextDayNum,
       date: new Date().toISOString().split('T')[0],
       status: 'completed',
-      type: logType,
-      title: logTitle.trim() || `第 ${nextDayNum} 天打卡实录`,
-      note: logNote.trim(),
+      isDual: hasThought,
+      type: hasThought ? '🌟 双轨双满贯' : '📘 雅思实操通关',
+      title: ieltsTitle.trim() || `第 ${nextDayNum} 天卡点实录`,
+      ieltsTitle: ieltsTitle.trim() || `第 ${nextDayNum} 天卡点实录`,
+      ieltsNote: ieltsNote.trim(),
+      thoughtNote: thoughtNote.trim() || '',
+      note: hasThought
+        ? `【雅思实操】${ieltsNote.trim()}\n【灵感速记】${thoughtNote.trim()}`
+        : `【雅思实操】${ieltsNote.trim()}`,
     };
+
+    // Auto-sync inspiration note to the blog's "Thoughts Stream"
+    if (hasThought) {
+      try {
+        const existingThoughts = JSON.parse(localStorage.getItem('ink_user_thoughts') || '[]');
+        const now = new Date();
+        const syncedThought = {
+          id: `t-chal-${Date.now()}`,
+          date: now.toISOString().split('T')[0],
+          time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+          content: `【21天挑战·Day ${nextDayNum}】${thoughtNote.trim()}`,
+          location: '21天打卡挑战',
+        };
+        localStorage.setItem('ink_user_thoughts', JSON.stringify([syncedThought, ...existingThoughts]));
+      } catch (err) {
+        console.error('Error syncing to thoughts stream:', err);
+      }
+    }
 
     const updated = [newLog, ...logs];
     setLogs(updated);
+    setSelectedDayDetail(newLog);
     try {
       localStorage.setItem('ink_challenge_logs', JSON.stringify(updated));
     } catch (err) {
       console.error(err);
     }
 
-    setLogTitle('');
-    setLogNote('');
+    setIeltsTitle('');
+    setIeltsNote('');
+    setThoughtNote('');
     setShowForm(false);
+  };
+
+  const handleResetToDefault = () => {
+    if (confirm('确认重置为官方第一天初始打卡记录吗？')) {
+      localStorage.removeItem('ink_challenge_logs');
+      setLogs(initialChallengeLogs);
+      setSelectedDayDetail(initialChallengeLogs[0]);
+    }
   };
 
   // Build 21 slots
@@ -108,8 +153,8 @@ export default function ChallengeSection() {
         </div>
         <p className="section-desc">
           在新时代，一个不报班、不请外教的普通人，纯靠 AI 能在短期内把雅思学到什么水平？
-          <strong>每日双轨推进：① 📘 雅思实操（1条卡点或招数）；② ✨ 灵感速记（1条思想闪念）。</strong>
-          30 天内有效打卡满 21 天即宣告通关，预设 9 天免死休整期，绝不搞一票否决的完美主义！
+          <strong> 每日双轨独立打卡：① 📘 雅思实操卡点（核心保底）+ ② ✨ 灵感速记（思维加分项）。</strong>
+          30 天内有效打卡满 21 天即宣告通关！预设 9 天免死休整期，绝不搞一票否决的完美主义。
         </p>
       </div>
 
@@ -164,7 +209,7 @@ export default function ChallengeSection() {
             )}
           </div>
           <div className="metric-sub">
-            {isTodayCompleted ? '今日双轨已稳稳打卡' : '雅思实操 + 灵感速记'}
+            {isTodayCompleted ? '今日任务稳稳达成' : '雅思实操 + 灵感速记'}
           </div>
         </div>
       </div>
@@ -189,28 +234,28 @@ export default function ChallengeSection() {
       <div className="challenge-rules-card">
         <div className="rules-header">
           <Compass size={18} className="rules-icon" />
-          <h3>挑战核心打卡清单与容错契约</h3>
+          <h3>双轨打卡规则与容错契约</h3>
         </div>
         <div className="rules-grid">
           <div className="rule-item">
             <span className="rule-badge">01</span>
             <div>
               <strong>📘 雅思实操（每日核心及格线）</strong>
-              <p>每天至少 1 条真实发生的做题卡点或试出的 AI 提分招数（配 1~2 句大白话或截图）。完成此项即 100 分通关！</p>
+              <p>每天至少 1 条当天真实做题卡点或试出的 AI 提分招数。完成此项即判定 100 分通关！</p>
             </div>
           </div>
           <div className="rule-item">
             <span className="rule-badge">02</span>
             <div>
               <strong>✨ 灵感速记（思维双满贯）</strong>
-              <p>每天至少 1 条思想闪念、读书金句或生活顿悟。两项加起来不到 100 字，耗时 5 分钟以内。</p>
+              <p>每天至少 1 条思想闪念或读书金句，填写后自动同步至全站「速记流」，点亮双满贯徽章！</p>
             </div>
           </div>
           <div className="rule-item">
             <span className="rule-badge">03</span>
             <div>
               <strong>🛡️ 预设 9 天免死容错</strong>
-              <p>30 天周期内累计满 21 天就算大胜。加班生病随便休，彻底消除断更内耗！</p>
+              <p>30 天周期内累计达成 21 天就算胜利。生病、加班随便休，绝不因为断更一天而内耗放弃。</p>
             </div>
           </div>
         </div>
@@ -221,65 +266,75 @@ export default function ChallengeSection() {
         <div className="stamps-header">
           <div>
             <h2 className="stamps-title">21 格打卡印章墙</h2>
-            <p className="stamps-desc">点击已盖章卡片可查看当天具体的卡点或小发现记录</p>
+            <p className="stamps-desc">点击已盖章卡片即可在下方查看当天的双轨实操与速记证词</p>
           </div>
-          <button
-            className="action-stamp-btn"
-            onClick={() => setShowForm(!showForm)}
-          >
-            <Plus size={15} />
-            <span>{showForm ? '收起打卡' : '记今日打卡'}</span>
-          </button>
+          <div className="header-actions-group">
+            <button
+              className="action-stamp-btn"
+              onClick={() => setShowForm(!showForm)}
+            >
+              <Plus size={15} />
+              <span>{showForm ? '收起打卡面板' : '记今日打卡 (双轨独立)'}</span>
+            </button>
+          </div>
         </div>
 
-        {/* Quick Log Form */}
+        {/* Dual Input Form */}
         {showForm && (
           <form className="challenge-form animate-fade-in" onSubmit={handleAddLog}>
-            <div className="form-row-type">
-              <label>打卡类型：</label>
-              <div className="type-buttons">
-                <button
-                  type="button"
-                  className={`type-btn ${logType === '📘 雅思实操 (卡点/招数)' ? 'active' : ''}`}
-                  onClick={() => setLogType('📘 雅思实操 (卡点/招数)')}
-                >
-                  📘 雅思实操 (卡点/招数)
-                </button>
-                <button
-                  type="button"
-                  className={`type-btn ${logType === '✨ 灵感速记 (闪念/顿悟)' ? 'active' : ''}`}
-                  onClick={() => setLogType('✨ 灵感速记 (闪念/顿悟)')}
-                >
-                  ✨ 灵感速记 (闪念/顿悟)
-                </button>
-                <button
-                  type="button"
-                  className={`type-btn ${logType === '🌟 双轨双卡 (雅思+速记)' ? 'active' : ''}`}
-                  onClick={() => setLogType('🌟 双轨双卡 (雅思+速记)')}
-                >
-                  🌟 双轨双卡 (雅思+速记)
-                </button>
+            <div className="form-legend">
+              <Sparkles size={16} className="legend-icon" />
+              <span>今日双轨打卡表单（两轨内容独立输入、互不冲突）</span>
+            </div>
+
+            <div className="dual-form-grid">
+              {/* Track 1: IELTS */}
+              <div className="dual-input-block ielts-track">
+                <div className="track-title-row">
+                  <span className="track-badge ielts">📘 项目一：雅思实操（必填 · 核心保底）</span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="卡点/招数简称（例：背单词看例句太耗时卡点）"
+                  value={ieltsTitle}
+                  onChange={e => setIeltsTitle(e.target.value)}
+                  className="challenge-input"
+                  required
+                />
+                <textarea
+                  placeholder="记录今天真实发生的做题卡点，或试出的 AI 提分招数（1~2 句话即可交卷）..."
+                  value={ieltsNote}
+                  onChange={e => setIeltsNote(e.target.value)}
+                  rows={4}
+                  required
+                  className="challenge-textarea"
+                />
+              </div>
+
+              {/* Track 2: Thought */}
+              <div className="dual-input-block thought-track">
+                <div className="track-title-row">
+                  <span className="track-badge thought">✨ 项目二：灵感速记（选填 · 思维双满贯）</span>
+                  <span className="auto-sync-tag">⚡ 自动同步全站「速记」</span>
+                </div>
+                <textarea
+                  placeholder="记录今天思想的闪念、读书顿悟或人生反思（选填，填了直接点亮 🌟 双满贯金印，并自动进入博客速记流）..."
+                  value={thoughtNote}
+                  onChange={e => setThoughtNote(e.target.value)}
+                  rows={6}
+                  className="challenge-textarea"
+                />
               </div>
             </div>
 
-            <input
-              type="text"
-              placeholder="今日标题（例如：把难词4个一组让AI生图）"
-              value={logTitle}
-              onChange={e => setLogTitle(e.target.value)}
-              className="challenge-input"
-            />
-
-            <textarea
-              placeholder="记录今天真实发生的卡点或小招数（1~2 句话大白话即可交卷）..."
-              value={logNote}
-              onChange={e => setLogNote(e.target.value)}
-              rows={3}
-              required
-              className="challenge-textarea"
-            />
-
-            <div className="form-actions-right">
+            <div className="form-submit-footer">
+              <div className="form-submit-hint">
+                {thoughtNote.trim() ? (
+                  <span className="hint-pill dual">🌟 已填写双轨内容，提交将点亮【双轨双满贯】！</span>
+                ) : (
+                  <span className="hint-pill single">✅ 已填写雅思实操，提交即可保底 100 分通关！</span>
+                )}
+              </div>
               <button type="submit" className="submit-challenge-btn">
                 <Send size={14} />
                 <span>立即交卷盖章 (Day {completedDays + 1})</span>
@@ -288,6 +343,7 @@ export default function ChallengeSection() {
           </form>
         )}
 
+        {/* 21 Stamps Grid */}
         <div className="stamps-grid">
           {slots.map(({ dayNum, status, log }) => (
             <div
@@ -297,17 +353,25 @@ export default function ChallengeSection() {
             >
               <div className="stamp-top">
                 <span className="stamp-day-num">Day {String(dayNum).padStart(2, '0')}</span>
-                {status === 'completed' && <CheckCircle2 size={16} className="stamp-check-icon" />}
-                {status === 'current' && <Flame size={16} className="stamp-fire-icon" />}
-                {status === 'locked' && <Lock size={14} className="stamp-lock-icon" />}
+                {status === 'completed' && (
+                  log?.isDual ? (
+                    <Star size={15} className="stamp-star-icon" title="双轨双满贯" />
+                  ) : (
+                    <CheckCircle2 size={15} className="stamp-check-icon" title="雅思通关" />
+                  )
+                )}
+                {status === 'current' && <Flame size={15} className="stamp-fire-icon" />}
+                {status === 'locked' && <Lock size={13} className="stamp-lock-icon" />}
               </div>
 
               <div className="stamp-body">
                 {status === 'completed' ? (
                   <>
-                    <div className="stamp-badge-stamped">PASSED</div>
-                    <div className="stamp-title-text" title={log?.title}>
-                      {log?.title}
+                    <div className={`stamp-badge-stamped ${log?.isDual ? 'dual' : ''}`}>
+                      {log?.isDual ? '🌟 双满贯' : '✅ PASSED'}
+                    </div>
+                    <div className="stamp-title-text" title={log?.ieltsTitle || log?.title}>
+                      {log?.ieltsTitle || log?.title}
                     </div>
                   </>
                 ) : status === 'current' ? (
@@ -331,29 +395,65 @@ export default function ChallengeSection() {
         </div>
       </div>
 
-      {/* Selected Day Log Detail Popover / Card */}
+      {/* Selected Day Log Detail Card */}
       {selectedDayDetail && (
         <div className="day-detail-card animate-fade-in">
           <div className="detail-header">
             <div>
-              <span className="detail-badge">Day {String(selectedDayDetail.day).padStart(2, '0')} · {selectedDayDetail.type}</span>
-              <h3 className="detail-title">{selectedDayDetail.title}</h3>
+              <div className="detail-badges-row">
+                <span className="detail-badge-day">Day {String(selectedDayDetail.day).padStart(2, '0')} 详细打卡证据档案</span>
+                {selectedDayDetail.isDual ? (
+                  <span className="detail-tag-dual">🌟 双轨双满贯（实操 + 速记全部达成）</span>
+                ) : (
+                  <span className="detail-tag-single">📘 雅思实操通关（已达成核心及格线）</span>
+                )}
+              </div>
+              <h3 className="detail-title">{selectedDayDetail.ieltsTitle || selectedDayDetail.title}</h3>
             </div>
-            <button className="close-detail-btn" onClick={() => setSelectedDayDetail(null)}>
-              ✕
-            </button>
+            <div className="detail-date-tag">
+              <Clock size={12} />
+              <span>{selectedDayDetail.date}</span>
+            </div>
           </div>
-          <div className="detail-date">
-            <Clock size={12} />
-            <span>打卡日期：{selectedDayDetail.date}</span>
+
+          <div className="detail-tracks-container">
+            {/* Track 1 Detail */}
+            <div className="detail-track-box ielts">
+              <div className="track-box-header">
+                <span className="track-icon">📘</span>
+                <h4>雅思实操卡点与招数</h4>
+              </div>
+              <p className="track-content-text">
+                {selectedDayDetail.ieltsNote || selectedDayDetail.note}
+              </p>
+            </div>
+
+            {/* Track 2 Detail */}
+            {selectedDayDetail.thoughtNote && (
+              <div className="detail-track-box thought">
+                <div className="track-box-header">
+                  <span className="track-icon">✨</span>
+                  <h4>灵感速记与顿悟</h4>
+                  <span className="synced-badge">⚡ 已同步全站速记流</span>
+                </div>
+                <p className="track-content-text">
+                  {selectedDayDetail.thoughtNote}
+                </p>
+              </div>
+            )}
           </div>
-          <p className="detail-note">{selectedDayDetail.note}</p>
         </div>
       )}
 
       {/* Daily Logs Timeline */}
       <div className="logs-timeline-section">
-        <h2 className="timeline-title">打卡历程日志 (Action Feed)</h2>
+        <div className="timeline-header-row">
+          <h2 className="timeline-title">打卡历程日志 (Action Feed)</h2>
+          <button className="reset-log-link" onClick={handleResetToDefault} title="若打卡异常可重置为初始数据">
+            🔄 同步官方初始数据
+          </button>
+        </div>
+
         <div className="challenge-logs-list">
           {logs.map(log => (
             <article key={log.day} className="challenge-log-item animate-fade-in">
@@ -362,9 +462,26 @@ export default function ChallengeSection() {
                 <span className="log-date">{log.date}</span>
               </div>
               <div className="log-main-col">
-                <div className="log-type-tag">{log.type}</div>
-                <h4 className="log-heading">{log.title}</h4>
-                <p className="log-text">{log.note}</p>
+                <div className="log-type-tag-row">
+                  {log.isDual ? (
+                    <span className="log-type-tag dual">🌟 双轨双满贯</span>
+                  ) : (
+                    <span className="log-type-tag ielts">📘 雅思实操</span>
+                  )}
+                </div>
+                <h4 className="log-heading">{log.ieltsTitle || log.title}</h4>
+                <div className="log-sub-content">
+                  <p className="log-section-p">
+                    <strong>📘 雅思实操：</strong>
+                    {log.ieltsNote || log.note}
+                  </p>
+                  {log.thoughtNote && (
+                    <p className="log-section-p thought-p">
+                      <strong>✨ 灵感速记：</strong>
+                      {log.thoughtNote}
+                    </p>
+                  )}
+                </div>
               </div>
             </article>
           ))}
