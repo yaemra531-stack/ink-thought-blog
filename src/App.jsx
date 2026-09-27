@@ -7,6 +7,7 @@ import ThoughtsStream from './components/ThoughtsStream';
 import ArchiveView from './components/ArchiveView';
 import AboutSection from './components/AboutSection';
 import ReferenceSection from './components/ReferenceSection';
+import ChallengeSection from './components/ChallengeSection';
 import SearchModal from './components/SearchModal';
 import NewPostModal from './components/NewPostModal';
 import ReadingPreferences from './components/ReadingPreferences';
@@ -201,6 +202,8 @@ export default function App() {
                 onSelectPost={handleSelectPost}
               />
             )}
+
+            {activeTab === 'challenge' && <ChallengeSection />}
 
             {activeTab === 'about' && (
               <AboutSection onOpenNewPost={() => setNewPostOpen(true)} />

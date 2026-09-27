@@ -13,7 +13,8 @@ import {
   BookMarked,
   Archive,
   User,
-  Sparkles
+  Sparkles,
+  Flame
 } from 'lucide-react';
 
 export default function Navbar({
@@ -52,6 +53,7 @@ export default function Navbar({
     { id: 'reference', label: '参考', icon: <BookMarked size={16} /> },
     { id: 'thoughts', label: '速记', icon: <Sparkles size={16} /> },
     { id: 'archive', label: '归档', icon: <Archive size={16} /> },
+    { id: 'challenge', label: '21天挑战', icon: <Flame size={16} /> },
     { id: 'about', label: '关于', icon: <User size={16} /> },
   ];
 

@@ -2206,3 +2206,604 @@
     max-height: 95vh;
   }
 }
+
+/* ==========================================================================
+   21-Day Challenge Section Styles
+   ========================================================================== */
+.challenge-page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1rem 0 4rem;
+}
+
+/* Metrics Dashboard */
+.challenge-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.challenge-metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.25rem 1rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.challenge-metric-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+}
+
+.metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.metric-label {
+  font-size: 0.825rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metric-icon {
+  color: var(--text-muted);
+}
+.metric-icon.accent {
+  color: var(--accent-primary);
+}
+.metric-icon.success {
+  color: #10B981;
+}
+
+.metric-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+}
+
+.metric-value .number {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.metric-value .total {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.status-badge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+}
+.status-badge.success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+}
+.status-badge.pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #D97706;
+}
+
+.metric-sub {
+  font-size: 0.775rem;
+  color: var(--text-secondary);
+}
+
+/* Progress Bar Card */
+.challenge-progress-bar-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.progress-bar-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.progress-track {
+  width: 100%;
+  height: 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: 0.85rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-primary), #EA580C, #F59E0B);
+  border-radius: var(--radius-full);
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.milestones-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.775rem;
+  color: var(--text-muted);
+}
+.milestones-row .active {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+/* Rules Card */
+.challenge-rules-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.rules-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.rules-icon {
+  color: var(--accent-primary);
+}
+.rules-header h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.rule-item {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+
+.rule-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--accent-light);
+  color: var(--accent-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.rule-item strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.rule-item p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Stamps Grid Section */
+.stamps-section {
+  margin-bottom: 3rem;
+}
+
+.stamps-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1.25rem;
+}
+
+.stamps-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem;
+}
+
+.stamps-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.action-stamp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--accent-primary);
+  color: #FFF;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+}
+.action-stamp-btn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+/* Stamp Cards Grid (7 per row on desktop) */
+.stamps-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 860px) {
+  .stamps-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .stamps-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.stamp-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.65rem;
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: default;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.stamp-card.completed {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 8px -2px var(--accent-glow);
+}
+.stamp-card.completed:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-hover);
+}
+
+.stamp-card.completed.selected {
+  outline: 2px solid var(--accent-primary);
+}
+
+.stamp-card.current {
+  border: 1px dashed var(--accent-primary);
+  background: var(--accent-light);
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+.stamp-card.locked {
+  opacity: 0.55;
+  background: var(--bg-secondary);
+}
+
+.stamp-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stamp-day-num {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.stamp-card.completed .stamp-day-num {
+  color: var(--accent-primary);
+}
+
+.stamp-check-icon {
+  color: #10B981;
+}
+.stamp-fire-icon {
+  color: var(--accent-primary);
+}
+.stamp-lock-icon {
+  color: var(--text-muted);
+}
+
+.stamp-body {
+  text-align: center;
+  margin: 0.35rem 0;
+}
+
+.stamp-badge-stamped {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 0.15rem 0.35rem;
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: 3px;
+  transform: rotate(-4deg);
+  margin-bottom: 0.25rem;
+}
+
+.stamp-title-text {
+  font-size: 0.7rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.stamp-current-text, .stamp-locked-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.stamp-current-text {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.stamp-date-footer {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* Quick Form */
+.challenge-form {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.form-row-type {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+.form-row-type label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.type-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.type-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-medium);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.type-btn.active {
+  background: var(--accent-light);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.challenge-input, .challenge-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-input);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 0.85rem;
+  font-family: inherit;
+}
+.challenge-input:focus, .challenge-textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.form-actions-right {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.submit-challenge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--accent-primary);
+  color: #FFF;
+  border: none;
+  padding: 0.5rem 1.15rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.submit-challenge-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* Detail Popover */
+.day-detail-card {
+  background: var(--bg-card);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-md);
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.detail-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  margin-bottom: 0.25rem;
+}
+
+.detail-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.close-detail-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.close-detail-btn:hover {
+  color: var(--text-primary);
+}
+
+.detail-date {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.detail-note {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Daily Action Feed / Timeline */
+.logs-timeline-section {
+  border-top: 1px solid var(--border-medium);
+  padding-top: 2rem;
+}
+
+.timeline-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.25rem;
+}
+
+.challenge-logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.challenge-log-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 1.15rem 1.25rem;
+  display: flex;
+  gap: 1.5rem;
+  transition: border-color var(--transition-fast);
+}
+.challenge-log-item:hover {
+  border-color: var(--border-medium);
+}
+
+.log-day-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+}
+
+.log-day-tag {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+
+.log-date {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.log-main-col {
+  flex: 1;
+}
+
+.log-type-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: var(--accent-light);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  margin-bottom: 0.35rem;
+}
+
+.log-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.35rem;
+}
+
+.log-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
