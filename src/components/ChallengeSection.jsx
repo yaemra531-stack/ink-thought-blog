@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { initialChallengeConfig, initialChallengeLogs } from '../content/challengeData';
 
-export default function ChallengeSection() {
+export default function ChallengeSection({ isAuthor }) {
   const [logs, setLogs] = useState(() => {
     try {
       const saved = localStorage.getItem('ink_challenge_logs');
@@ -355,15 +355,17 @@ export default function ChallengeSection() {
             <h2 className="stamps-title">21 格打卡印章墙</h2>
             <p className="stamps-desc">点击已盖章卡片即可在下方查看当天的双轨实操与速记证词</p>
           </div>
-          <div className="header-actions-group">
-            <button
-              className="action-stamp-btn"
-              onClick={() => setShowForm(!showForm)}
-            >
-              <Plus size={15} />
-              <span>{showForm ? '收起打卡面板' : '记今日打卡 (双轨独立)'}</span>
-            </button>
-          </div>
+          {isAuthor && (
+            <div className="header-actions-group">
+              <button
+                className="action-stamp-btn"
+                onClick={() => setShowForm(!showForm)}
+              >
+                <Plus size={15} />
+                <span>{showForm ? '收起打卡面板' : '记今日打卡 (双轨独立)'}</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Dual Input Form */}
@@ -555,24 +557,26 @@ export default function ChallengeSection() {
                     <Clock size={12} />
                     <span>{selectedDayDetail.date}</span>
                   </div>
-                  <div className="log-manage-btn-group">
-                    <button
-                      className="log-manage-btn edit"
-                      onClick={() => handleStartEditDay(selectedDayDetail)}
-                      title="编辑修改打卡"
-                    >
-                      <PenLine size={13} />
-                      <span>编辑</span>
-                    </button>
-                    <button
-                      className="log-manage-btn delete"
-                      onClick={() => handleDeleteDay(selectedDayDetail.day)}
-                      title="删除此天打卡"
-                    >
-                      <Trash2 size={13} />
-                      <span>删除</span>
-                    </button>
-                  </div>
+                  {isAuthor && (
+                    <div className="log-manage-btn-group">
+                      <button
+                        className="log-manage-btn edit"
+                        onClick={() => handleStartEditDay(selectedDayDetail)}
+                        title="编辑修改打卡"
+                      >
+                        <PenLine size={13} />
+                        <span>编辑</span>
+                      </button>
+                      <button
+                        className="log-manage-btn delete"
+                        onClick={() => handleDeleteDay(selectedDayDetail.day)}
+                        title="删除此天打卡"
+                      >
+                        <Trash2 size={13} />
+                        <span>删除</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -611,9 +615,11 @@ export default function ChallengeSection() {
       <div className="logs-timeline-section">
         <div className="timeline-header-row">
           <h2 className="timeline-title">打卡历程日志 (Action Feed)</h2>
-          <button className="reset-log-link" onClick={handleResetToDefault} title="若打卡异常可重置为初始数据">
-            🔄 同步官方初始数据
-          </button>
+          {isAuthor && (
+            <button className="reset-log-link" onClick={handleResetToDefault} title="若打卡异常可重置为初始数据">
+              🔄 同步官方初始数据
+            </button>
+          )}
         </div>
 
         <div className="challenge-logs-list">
@@ -633,28 +639,30 @@ export default function ChallengeSection() {
                 </div>
                 <div className="timeline-title-row">
                   <h4 className="log-heading">{log.ieltsTitle || log.title}</h4>
-                  <div className="timeline-action-buttons">
-                    <button
-                      className="mini-log-btn edit"
-                      onClick={() => {
-                        setSelectedDayDetail(log);
-                        handleStartEditDay(log);
-                        window.scrollTo({ top: 400, behavior: 'smooth' });
-                      }}
-                      title="编辑"
-                    >
-                      <PenLine size={12} />
-                      <span>编辑</span>
-                    </button>
-                    <button
-                      className="mini-log-btn delete"
-                      onClick={() => handleDeleteDay(log.day)}
-                      title="删除"
-                    >
-                      <Trash2 size={12} />
-                      <span>删除</span>
-                    </button>
-                  </div>
+                  {isAuthor && (
+                    <div className="timeline-action-buttons">
+                      <button
+                        className="mini-log-btn edit"
+                        onClick={() => {
+                          setSelectedDayDetail(log);
+                          handleStartEditDay(log);
+                          window.scrollTo({ top: 400, behavior: 'smooth' });
+                        }}
+                        title="编辑"
+                      >
+                        <PenLine size={12} />
+                        <span>编辑</span>
+                      </button>
+                      <button
+                        className="mini-log-btn delete"
+                        onClick={() => handleDeleteDay(log.day)}
+                        title="删除"
+                      >
+                        <Trash2 size={12} />
+                        <span>删除</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="log-sub-content">
                   <p className="log-section-p">

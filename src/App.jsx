@@ -22,6 +22,30 @@ export default function App() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [activeTab, setActiveTab] = useState('posts'); // 'posts' | 'thoughts' | 'archive' | 'about'
   const [selectedTag, setSelectedTag] = useState(null);
+  const [isAuthor, setIsAuthor] = useState(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const authorParam = urlParams.get('author') || urlParams.get('admin');
+      if (authorParam && ['gas', 'curry', 'true'].includes(authorParam.toLowerCase())) {
+        localStorage.setItem('ink_author_mode', 'true');
+        return true;
+      }
+      return localStorage.getItem('ink_author_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleAuthorMode = () => {
+    const nextState = !isAuthor;
+    setIsAuthor(nextState);
+    if (nextState) {
+      localStorage.setItem('ink_author_mode', 'true');
+    } else {
+      localStorage.removeItem('ink_author_mode');
+    }
+  };
+
 
   // Modals & Panels
   const [searchOpen, setSearchOpen] = useState(false);
@@ -144,6 +168,8 @@ export default function App() {
         onOpenNewPost={() => setNewPostOpen(true)}
         onTogglePrefs={() => setPrefsOpen(!prefsOpen)}
         isZenMode={isZenMode}
+        isAuthor={isAuthor}
+        onToggleAuthorMode={handleToggleAuthorMode}
       />
 
       {/* Main Content Area */}
@@ -159,6 +185,7 @@ export default function App() {
             setIsZenMode={setIsZenMode}
             onTogglePrefs={() => setPrefsOpen(true)}
             onEditPost={handleEditPost}
+            isAuthor={isAuthor}
           />
         ) : (
           /* Tabbed Views */
@@ -227,7 +254,7 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'thoughts' && <ThoughtsStream />}
+            {activeTab === 'thoughts' && <ThoughtsStream isAuthor={isAuthor} />}
 
             {activeTab === 'archive' && (
               <ArchiveView
@@ -236,7 +263,7 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'challenge' && <ChallengeSection />}
+            {activeTab === 'challenge' && <ChallengeSection isAuthor={isAuthor} />}
 
             {activeTab === 'about' && (
               <AboutSection onOpenNewPost={() => setNewPostOpen(true)} />
@@ -250,6 +277,8 @@ export default function App() {
         totalPosts={posts.length}
         totalWords={totalWordCount}
         isZenMode={isZenMode}
+        isAuthor={isAuthor}
+        onToggleAuthorMode={handleToggleAuthorMode}
       />
 
       {/* Global Search Modal (Cmd+K) */}

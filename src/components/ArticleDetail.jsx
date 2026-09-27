@@ -26,6 +26,7 @@ export default function ArticleDetail({
   setIsZenMode,
   onTogglePrefs,
   onEditPost,
+  isAuthor,
 }) {
   const [likes, setLikes] = useState(() => {
     try {
@@ -135,14 +136,16 @@ export default function ArticleDetail({
             <span>{isZenMode ? '退出专注' : '专注模式'}</span>
           </button>
 
-          <button
-            className="action-pill-btn"
-            onClick={() => onEditPost && onEditPost(post)}
-            title="编辑修改文章内容"
-          >
-            <PenLine size={15} />
-            <span>编辑文章</span>
-          </button>
+          {isAuthor && (
+            <button
+              className="action-pill-btn"
+              onClick={() => onEditPost && onEditPost(post)}
+              title="编辑修改文章内容"
+            >
+              <PenLine size={15} />
+              <span>编辑文章</span>
+            </button>
+          )}
 
           <button
             className="action-pill-btn"

@@ -14,7 +14,9 @@ import {
   Archive,
   User,
   Sparkles,
-  Flame
+  Flame,
+  ShieldCheck,
+  Eye
 } from 'lucide-react';
 
 export default function Navbar({
@@ -26,6 +28,8 @@ export default function Navbar({
   onOpenNewPost,
   onTogglePrefs,
   isZenMode,
+  isAuthor,
+  onToggleAuthorMode,
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -111,16 +115,46 @@ export default function Navbar({
             <span className="search-shortcut">⌘K</span>
           </button>
 
-          {/* New Markdown Post Helper */}
-          <button
-            className="action-icon-btn write-btn"
-            onClick={onOpenNewPost}
-            title="撰写与导出新 Markdown 文章"
-            aria-label="写新文章"
-          >
-            <PenTool size={16} />
-            <span className="btn-label-desktop">写文章</span>
-          </button>
+          {/* Author Mode Controls */}
+          {isAuthor ? (
+            <>
+              <button
+                className="action-icon-btn author-status-badge"
+                onClick={onToggleAuthorMode}
+                title="当前为【站长·瓦斯模式】，点击可切换为读者视角"
+                aria-label="切换视角"
+              >
+                <ShieldCheck size={16} className="author-shield-icon" />
+                <span className="author-badge-label">站长</span>
+              </button>
+              <button
+                className="action-icon-btn write-btn"
+                onClick={onOpenNewPost}
+                title="撰写与导出新 Markdown 文章"
+                aria-label="写新文章"
+              >
+                <PenTool size={16} />
+                <span className="btn-label-desktop">写文章</span>
+              </button>
+            </>
+          ) : (
+            <button
+              className="action-icon-btn reader-preview-badge"
+              onClick={() => {
+                const pass = prompt('请输入站长通行密钥：');
+                if (pass === 'gas' || pass === 'curry') {
+                  onToggleAuthorMode();
+                } else if (pass !== null) {
+                  alert('密钥不正确');
+                }
+              }}
+              title="当前为【读者视角 (只读)】，站长点击可输入密钥解锁"
+              aria-label="读者只读模式"
+            >
+              <Eye size={15} />
+              <span className="reader-badge-label">读者视角</span>
+            </button>
+          )}
 
           {/* Reading Preferences (Font / Size) */}
           <button
@@ -171,16 +205,18 @@ export default function Navbar({
               </button>
             ))}
             <div className="mobile-drawer-divider" />
-            <button
-              className="mobile-nav-link"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onOpenNewPost();
-              }}
-            >
-              <PenTool size={16} />
-              <span>✍️ 撰写与导出 Markdown</span>
-            </button>
+            {isAuthor && (
+              <button
+                className="mobile-nav-link"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenNewPost();
+                }}
+              >
+                <PenTool size={16} />
+                <span>✍️ 撰写与导出 Markdown</span>
+              </button>
+            )}
           </div>
         </div>
       )}

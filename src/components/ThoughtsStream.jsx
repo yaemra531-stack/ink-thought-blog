@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Sparkles, MapPin, Clock, Plus, Send, Heart, PenLine, Trash2, Check, X } from 'lucide-react';
 import initialThoughts from '../content/thoughts.json';
 
-export default function ThoughtsStream() {
+export default function ThoughtsStream({ isAuthor }) {
   const [thoughts, setThoughts] = useState(() => {
     try {
       const saved = localStorage.getItem('ink_user_thoughts');
@@ -111,13 +111,15 @@ export default function ThoughtsStream() {
           无需长篇大论。闪念的电光火石、偶遇的字句、黄昏的风与书页的翻动，皆是生活的微型诗。随时可编辑与修改。
         </p>
 
-        <button
-          className="add-thought-toggle-btn"
-          onClick={() => setShowInput(!showInput)}
-        >
-          <Plus size={16} />
-          <span>{showInput ? '收起编辑器' : '记下一则灵感'}</span>
-        </button>
+        {isAuthor && (
+          <button
+            className="add-thought-toggle-btn"
+            onClick={() => setShowInput(!showInput)}
+          >
+            <Plus size={16} />
+            <span>{showInput ? '收起编辑器' : '记下一则灵感'}</span>
+          </button>
+        )}
       </div>
 
       {showInput && (
@@ -219,24 +221,26 @@ export default function ThoughtsStream() {
                       <span>{(likes[item.id] || 0) > 0 ? likes[item.id] : '心动'}</span>
                     </button>
 
-                    <div className="thought-manage-actions">
-                      <button
-                        className="thought-action-btn edit-btn"
-                        onClick={() => handleStartEdit(item)}
-                        title="编辑修改此条速记"
-                      >
-                        <PenLine size={13} />
-                        <span>编辑</span>
-                      </button>
-                      <button
-                        className="thought-action-btn delete-btn"
-                        onClick={() => handleDeleteThought(item.id)}
-                        title="删除此条速记"
-                      >
-                        <Trash2 size={13} />
-                        <span>删除</span>
-                      </button>
-                    </div>
+                    {isAuthor && (
+                      <div className="thought-manage-actions">
+                        <button
+                          className="thought-action-btn edit-btn"
+                          onClick={() => handleStartEdit(item)}
+                          title="编辑修改此条速记"
+                        >
+                          <PenLine size={13} />
+                          <span>编辑</span>
+                        </button>
+                        <button
+                          className="thought-action-btn delete-btn"
+                          onClick={() => handleDeleteThought(item.id)}
+                          title="删除此条速记"
+                        >
+                          <Trash2 size={13} />
+                          <span>删除</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
