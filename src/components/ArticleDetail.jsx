@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
+  PenLine,
   Calendar,
   Clock,
   BookOpen,
@@ -24,6 +25,7 @@ export default function ArticleDetail({
   isZenMode,
   setIsZenMode,
   onTogglePrefs,
+  onEditPost,
 }) {
   const [likes, setLikes] = useState(() => {
     try {
@@ -131,6 +133,15 @@ export default function ArticleDetail({
           >
             {isZenMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
             <span>{isZenMode ? '退出专注' : '专注模式'}</span>
+          </button>
+
+          <button
+            className="action-pill-btn"
+            onClick={() => onEditPost && onEditPost(post)}
+            title="编辑修改文章内容"
+          >
+            <PenLine size={15} />
+            <span>编辑文章</span>
           </button>
 
           <button

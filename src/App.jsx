@@ -26,6 +26,7 @@ export default function App() {
   // Modals & Panels
   const [searchOpen, setSearchOpen] = useState(false);
   const [newPostOpen, setNewPostOpen] = useState(false);
+  const [editingPostForModal, setEditingPostForModal] = useState(null);
   const [prefsOpen, setPrefsOpen] = useState(false);
 
   // Reading Preferences State (persisted in localStorage)
@@ -83,12 +84,43 @@ export default function App() {
     setSelectedPost(null);
   };
 
+  const handleEditPost = post => {
+    setEditingPostForModal(post);
+    setNewPostOpen(true);
+  };
+
+  const handleDeletePost = slug => {
+    if (confirm('确认删除这篇文章吗？')) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('ink_user_custom_posts') || '[]');
+        const updated = saved.filter(p => p.slug !== slug);
+        localStorage.setItem('ink_user_custom_posts', JSON.stringify(updated));
+        setPosts(getLocalPosts());
+        setSelectedPost(null);
+        setNewPostOpen(false);
+        setEditingPostForModal(null);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
   const handleSaveDraft = newPost => {
     try {
       const saved = JSON.parse(localStorage.getItem('ink_user_custom_posts') || '[]');
-      saved.unshift(newPost);
+      const existingIdx = saved.findIndex(p => p.slug === newPost.slug);
+      if (existingIdx >= 0) {
+        saved[existingIdx] = newPost;
+      } else {
+        saved.unshift(newPost);
+      }
       localStorage.setItem('ink_user_custom_posts', JSON.stringify(saved));
-      setPosts(getLocalPosts());
+      const updatedPosts = getLocalPosts();
+      setPosts(updatedPosts);
+      if (selectedPost && selectedPost.slug === newPost.slug) {
+        const found = updatedPosts.find(p => p.slug === newPost.slug);
+        if (found) setSelectedPost(found);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -126,6 +158,7 @@ export default function App() {
             isZenMode={isZenMode}
             setIsZenMode={setIsZenMode}
             onTogglePrefs={() => setPrefsOpen(true)}
+            onEditPost={handleEditPost}
           />
         ) : (
           /* Tabbed Views */
@@ -230,8 +263,13 @@ export default function App() {
       {/* New Post / Markdown Helper Drawer */}
       <NewPostModal
         isOpen={newPostOpen}
-        onClose={() => setNewPostOpen(false)}
+        onClose={() => {
+          setNewPostOpen(false);
+          setEditingPostForModal(null);
+        }}
         onSaveDraft={handleSaveDraft}
+        postToEdit={editingPostForModal}
+        onDeletePost={handleDeletePost}
       />
 
       {/* Reading & Typography Preferences Modal */}

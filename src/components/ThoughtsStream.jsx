@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, MapPin, Clock, Plus, Send, Heart } from 'lucide-react';
+import { Sparkles, MapPin, Clock, Plus, Send, Heart, PenLine, Trash2, Check, X } from 'lucide-react';
 import initialThoughts from '../content/thoughts.json';
 
 export default function ThoughtsStream() {
@@ -18,6 +18,12 @@ export default function ThoughtsStream() {
   const [newThought, setNewThought] = useState('');
   const [location, setLocation] = useState('');
   const [showInput, setShowInput] = useState(false);
+
+  // Edit states
+  const [editingId, setEditingId] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+
   const [likes, setLikes] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('ink_thought_likes') || '{}');
@@ -47,6 +53,47 @@ export default function ThoughtsStream() {
     setShowInput(false);
   };
 
+  const handleStartEdit = item => {
+    setEditingId(item.id);
+    setEditContent(item.content);
+    setEditLocation(item.location || '');
+  };
+
+  const handleSaveEdit = (e) => {
+    e.preventDefault();
+    if (!editContent.trim()) return;
+
+    const updated = thoughts.map(t => {
+      if (t.id === editingId) {
+        return {
+          ...t,
+          content: editContent.trim(),
+          location: editLocation.trim() || t.location,
+        };
+      }
+      return t;
+    });
+
+    setThoughts(updated);
+    localStorage.setItem('ink_user_thoughts', JSON.stringify(updated));
+    setEditingId(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditContent('');
+    setEditLocation('');
+  };
+
+  const handleDeleteThought = (id) => {
+    if (confirm('确认删除这则速记吗？此操作无法撤销。')) {
+      const updated = thoughts.filter(t => t.id !== id);
+      setThoughts(updated);
+      localStorage.setItem('ink_user_thoughts', JSON.stringify(updated));
+      if (editingId === id) setEditingId(null);
+    }
+  };
+
   const handleToggleLike = id => {
     const updated = { ...likes, [id]: (likes[id] || 0) + 1 };
     setLikes(updated);
@@ -61,7 +108,7 @@ export default function ThoughtsStream() {
           <h1 className="section-title">灵感速记与碎片</h1>
         </div>
         <p className="section-desc">
-          无需长篇大论。闪念的电光火石、偶遇的字句、黄昏的风与书页的翻动，皆是生活的微型诗。
+          无需长篇大论。闪念的电光火石、偶遇的字句、黄昏的风与书页的翻动，皆是生活的微型诗。随时可编辑与修改。
         </p>
 
         <button
@@ -126,18 +173,73 @@ export default function ThoughtsStream() {
                 )}
               </div>
 
-              <p className="thought-content">{item.content}</p>
+              {editingId === item.id ? (
+                /* Inline Edit Mode */
+                <form className="inline-edit-thought-form animate-fade-in" onSubmit={handleSaveEdit}>
+                  <textarea
+                    value={editContent}
+                    onChange={e => setEditContent(e.target.value)}
+                    rows={3}
+                    className="challenge-textarea"
+                    required
+                    autoFocus
+                  />
+                  <div className="inline-edit-actions">
+                    <input
+                      type="text"
+                      placeholder="地点或心境"
+                      value={editLocation}
+                      onChange={e => setEditLocation(e.target.value)}
+                      className="location-input small-loc-input"
+                    />
+                    <div className="btn-group-right">
+                      <button type="button" className="btn-cancel-edit" onClick={handleCancelEdit}>
+                        <X size={13} />
+                        <span>取消</span>
+                      </button>
+                      <button type="submit" className="btn-save-edit">
+                        <Check size={13} />
+                        <span>保存修改</span>
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                /* Display Mode */
+                <>
+                  <p className="thought-content">{item.content}</p>
 
-              <div className="thought-footer">
-                <button
-                  className={`like-chip-btn ${(likes[item.id] || 0) > 0 ? 'liked' : ''}`}
-                  onClick={() => handleToggleLike(item.id)}
-                  aria-label="点赞速记"
-                >
-                  <Heart size={13} fill={(likes[item.id] || 0) > 0 ? 'currentColor' : 'none'} />
-                  <span>{(likes[item.id] || 0) > 0 ? likes[item.id] : '心动'}</span>
-                </button>
-              </div>
+                  <div className="thought-footer">
+                    <button
+                      className={`like-chip-btn ${(likes[item.id] || 0) > 0 ? 'liked' : ''}`}
+                      onClick={() => handleToggleLike(item.id)}
+                      aria-label="点赞速记"
+                    >
+                      <Heart size={13} fill={(likes[item.id] || 0) > 0 ? 'currentColor' : 'none'} />
+                      <span>{(likes[item.id] || 0) > 0 ? likes[item.id] : '心动'}</span>
+                    </button>
+
+                    <div className="thought-manage-actions">
+                      <button
+                        className="thought-action-btn edit-btn"
+                        onClick={() => handleStartEdit(item)}
+                        title="编辑修改此条速记"
+                      >
+                        <PenLine size={13} />
+                        <span>编辑</span>
+                      </button>
+                      <button
+                        className="thought-action-btn delete-btn"
+                        onClick={() => handleDeleteThought(item.id)}
+                        title="删除此条速记"
+                      >
+                        <Trash2 size={13} />
+                        <span>删除</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </article>
           ))
         )}

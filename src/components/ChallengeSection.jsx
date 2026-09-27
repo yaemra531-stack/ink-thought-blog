@@ -13,7 +13,11 @@ import {
   Lock,
   Star,
   ExternalLink,
-  BookOpen
+  BookOpen,
+  PenLine,
+  Trash2,
+  X,
+  Check
 } from 'lucide-react';
 import { initialChallengeConfig, initialChallengeLogs } from '../content/challengeData';
 
@@ -36,6 +40,10 @@ export default function ChallengeSection() {
 
   const [showForm, setShowForm] = useState(false);
   const [selectedDayDetail, setSelectedDayDetail] = useState(logs[0] || null);
+  const [editingDay, setEditingDay] = useState(null);
+  const [editIeltsTitle, setEditIeltsTitle] = useState('');
+  const [editIeltsNote, setEditIeltsNote] = useState('');
+  const [editThoughtNote, setEditThoughtNote] = useState('');
 
   // Form states - separate inputs for separate tracks
   const [ieltsTitle, setIeltsTitle] = useState('');
@@ -120,6 +128,85 @@ export default function ChallengeSection() {
     setIeltsNote('');
     setThoughtNote('');
     setShowForm(false);
+  };
+
+  const handleStartEditDay = (log) => {
+    setEditingDay(log.day);
+    setEditIeltsTitle(log.ieltsTitle || log.title || '');
+    setEditIeltsNote(log.ieltsNote || log.note || '');
+    setEditThoughtNote(log.thoughtNote || '');
+  };
+
+  const handleCancelEditDay = () => {
+    setEditingDay(null);
+    setEditIeltsTitle('');
+    setEditIeltsNote('');
+    setEditThoughtNote('');
+  };
+
+  const handleSaveEditDay = (e) => {
+    e.preventDefault();
+    if (!editIeltsNote.trim()) {
+      alert('雅思实操内容不能为空！');
+      return;
+    }
+
+    const hasThought = !!editThoughtNote.trim();
+    const updated = logs.map(l => {
+      if (l.day === editingDay) {
+        return {
+          ...l,
+          isDual: hasThought,
+          type: hasThought ? '🌟 双轨双满贯' : '📘 雅思实操通关',
+          title: editIeltsTitle.trim() || ('第 ' + l.day + ' 天卡点实录'),
+          ieltsTitle: editIeltsTitle.trim() || ('第 ' + l.day + ' 天卡点实录'),
+          ieltsNote: editIeltsNote.trim(),
+          thoughtNote: editThoughtNote.trim() || '',
+          note: hasThought
+            ? '【雅思实操】' + editIeltsNote.trim() + '\n【灵感速记】' + editThoughtNote.trim()
+            : '【雅思实操】' + editIeltsNote.trim(),
+        };
+      }
+      return l;
+    });
+
+    setLogs(updated);
+    const updatedDetail = updated.find(l => l.day === editingDay);
+    if (updatedDetail) setSelectedDayDetail(updatedDetail);
+    localStorage.setItem('ink_challenge_logs', JSON.stringify(updated));
+
+    if (hasThought) {
+      try {
+        const existingThoughts = JSON.parse(localStorage.getItem('ink_user_thoughts') || '[]');
+        const updatedThoughts = [
+          {
+            id: 't-edit-' + Date.now(),
+            date: updatedDetail.date,
+            time: '刚刚',
+            content: '【21天挑战·Day ' + editingDay + '】' + editThoughtNote.trim(),
+            location: '21天打卡挑战 (已更新)',
+          },
+          ...existingThoughts.filter(t => !t.content.includes('【21天挑战·Day ' + editingDay + '】'))
+        ];
+        localStorage.setItem('ink_user_thoughts', JSON.stringify(updatedThoughts));
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    setEditingDay(null);
+  };
+
+  const handleDeleteDay = (dayNum) => {
+    if (confirm('确认删除 Day ' + dayNum + ' 的打卡记录吗？删除后可重新交卷。')) {
+      const updated = logs.filter(l => l.day !== dayNum);
+      setLogs(updated);
+      localStorage.setItem('ink_challenge_logs', JSON.stringify(updated));
+      if (selectedDayDetail && selectedDayDetail.day === dayNum) {
+        setSelectedDayDetail(updated[0] || null);
+      }
+      if (editingDay === dayNum) setEditingDay(null);
+    }
   };
 
   const handleResetToDefault = () => {
@@ -398,50 +485,125 @@ export default function ChallengeSection() {
       {/* Selected Day Log Detail Card */}
       {selectedDayDetail && (
         <div className="day-detail-card animate-fade-in">
-          <div className="detail-header">
-            <div>
-              <div className="detail-badges-row">
-                <span className="detail-badge-day">Day {String(selectedDayDetail.day).padStart(2, '0')} 详细打卡证据档案</span>
-                {selectedDayDetail.isDual ? (
-                  <span className="detail-tag-dual">🌟 双轨双满贯（实操 + 速记全部达成）</span>
-                ) : (
-                  <span className="detail-tag-single">📘 雅思实操通关（已达成核心及格线）</span>
+          {editingDay === selectedDayDetail.day ? (
+            /* Editing Form for this day */
+            <form className="edit-day-form animate-fade-in" onSubmit={handleSaveEditDay}>
+              <div className="edit-form-header">
+                <span className="edit-form-title">✏️ 编辑 Day {selectedDayDetail.day} 打卡记录</span>
+                <span className="edit-form-date">打卡日期：{selectedDayDetail.date}</span>
+              </div>
+
+              <div className="dual-form-grid">
+                <div className="dual-input-block ielts-track">
+                  <span className="track-badge ielts">📘 雅思实操（必填）</span>
+                  <input
+                    type="text"
+                    placeholder="卡点/招数简称"
+                    value={editIeltsTitle}
+                    onChange={e => setEditIeltsTitle(e.target.value)}
+                    className="challenge-input"
+                    required
+                  />
+                  <textarea
+                    placeholder="雅思实操做题卡点或AI招数..."
+                    value={editIeltsNote}
+                    onChange={e => setEditIeltsNote(e.target.value)}
+                    rows={4}
+                    required
+                    className="challenge-textarea"
+                  />
+                </div>
+
+                <div className="dual-input-block thought-track">
+                  <span className="track-badge thought">✨ 灵感速记（选填）</span>
+                  <textarea
+                    placeholder="思想闪念、顿悟金句..."
+                    value={editThoughtNote}
+                    onChange={e => setEditThoughtNote(e.target.value)}
+                    rows={6}
+                    className="challenge-textarea"
+                  />
+                </div>
+              </div>
+
+              <div className="edit-actions-bar">
+                <button type="button" className="btn-cancel-edit" onClick={handleCancelEditDay}>
+                  <X size={14} /> <span>取消</span>
+                </button>
+                <button type="submit" className="btn-save-edit">
+                  <Check size={14} /> <span>保存修改</span>
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* View Mode */
+            <>
+              <div className="detail-header">
+                <div>
+                  <div className="detail-badges-row">
+                    <span className="detail-badge-day">Day {String(selectedDayDetail.day).padStart(2, '0')} 详细打卡证据档案</span>
+                    {selectedDayDetail.isDual ? (
+                      <span className="detail-tag-dual">🌟 双轨双满贯（实操 + 速记全部达成）</span>
+                    ) : (
+                      <span className="detail-tag-single">📘 雅思实操通关（已达成核心及格线）</span>
+                    )}
+                  </div>
+                  <h3 className="detail-title">{selectedDayDetail.ieltsTitle || selectedDayDetail.title}</h3>
+                </div>
+                <div className="detail-actions-right">
+                  <div className="detail-date-tag">
+                    <Clock size={12} />
+                    <span>{selectedDayDetail.date}</span>
+                  </div>
+                  <div className="log-manage-btn-group">
+                    <button
+                      className="log-manage-btn edit"
+                      onClick={() => handleStartEditDay(selectedDayDetail)}
+                      title="编辑修改打卡"
+                    >
+                      <PenLine size={13} />
+                      <span>编辑</span>
+                    </button>
+                    <button
+                      className="log-manage-btn delete"
+                      onClick={() => handleDeleteDay(selectedDayDetail.day)}
+                      title="删除此天打卡"
+                    >
+                      <Trash2 size={13} />
+                      <span>删除</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="detail-tracks-container">
+                {/* Track 1 Detail */}
+                <div className="detail-track-box ielts">
+                  <div className="track-box-header">
+                    <span className="track-icon">📘</span>
+                    <h4>雅思实操卡点与招数</h4>
+                  </div>
+                  <p className="track-content-text">
+                    {selectedDayDetail.ieltsNote || selectedDayDetail.note}
+                  </p>
+                </div>
+
+                {/* Track 2 Detail */}
+                {selectedDayDetail.thoughtNote && (
+                  <div className="detail-track-box thought">
+                    <div className="track-box-header">
+                      <span className="track-icon">✨</span>
+                      <h4>灵感速记与顿悟</h4>
+                      <span className="synced-badge">⚡ 已同步全站速记流</span>
+                    </div>
+                    <p className="track-content-text">
+                      {selectedDayDetail.thoughtNote}
+                    </p>
+                  </div>
                 )}
               </div>
-              <h3 className="detail-title">{selectedDayDetail.ieltsTitle || selectedDayDetail.title}</h3>
-            </div>
-            <div className="detail-date-tag">
-              <Clock size={12} />
-              <span>{selectedDayDetail.date}</span>
-            </div>
-          </div>
-
-          <div className="detail-tracks-container">
-            {/* Track 1 Detail */}
-            <div className="detail-track-box ielts">
-              <div className="track-box-header">
-                <span className="track-icon">📘</span>
-                <h4>雅思实操卡点与招数</h4>
-              </div>
-              <p className="track-content-text">
-                {selectedDayDetail.ieltsNote || selectedDayDetail.note}
-              </p>
-            </div>
-
-            {/* Track 2 Detail */}
-            {selectedDayDetail.thoughtNote && (
-              <div className="detail-track-box thought">
-                <div className="track-box-header">
-                  <span className="track-icon">✨</span>
-                  <h4>灵感速记与顿悟</h4>
-                  <span className="synced-badge">⚡ 已同步全站速记流</span>
-                </div>
-                <p className="track-content-text">
-                  {selectedDayDetail.thoughtNote}
-                </p>
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       )}
 
@@ -469,7 +631,31 @@ export default function ChallengeSection() {
                     <span className="log-type-tag ielts">📘 雅思实操</span>
                   )}
                 </div>
-                <h4 className="log-heading">{log.ieltsTitle || log.title}</h4>
+                <div className="timeline-title-row">
+                  <h4 className="log-heading">{log.ieltsTitle || log.title}</h4>
+                  <div className="timeline-action-buttons">
+                    <button
+                      className="mini-log-btn edit"
+                      onClick={() => {
+                        setSelectedDayDetail(log);
+                        handleStartEditDay(log);
+                        window.scrollTo({ top: 400, behavior: 'smooth' });
+                      }}
+                      title="编辑"
+                    >
+                      <PenLine size={12} />
+                      <span>编辑</span>
+                    </button>
+                    <button
+                      className="mini-log-btn delete"
+                      onClick={() => handleDeleteDay(log.day)}
+                      title="删除"
+                    >
+                      <Trash2 size={12} />
+                      <span>删除</span>
+                    </button>
+                  </div>
+                </div>
                 <div className="log-sub-content">
                   <p className="log-section-p">
                     <strong>📘 雅思实操：</strong>
