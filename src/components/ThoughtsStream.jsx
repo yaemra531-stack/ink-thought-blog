@@ -73,20 +73,27 @@ export default function ThoughtsStream({ isAuthor }) {
     e.preventDefault();
     if (!editContent.trim()) return;
 
+    let targetThought = null;
     const updated = thoughts.map(t => {
       if (t.id === editingId) {
-        return {
+        targetThought = {
           ...t,
           content: editContent.trim(),
           location: editLocation.trim() || t.location,
         };
+        return targetThought;
       }
       return t;
     });
 
     setThoughts(updated);
     localStorage.setItem('ink_user_thoughts', JSON.stringify(updated));
-    cloudSync.saveThought(item);
+    if (targetThought) {
+      cloudSync.updateThought(targetThought.id, {
+        content: targetThought.content,
+        location: targetThought.location,
+      });
+    }
     setEditingId(null);
   };
 
@@ -102,7 +109,6 @@ export default function ThoughtsStream({ isAuthor }) {
       setThoughts(updated);
       localStorage.setItem('ink_user_thoughts', JSON.stringify(updated));
       cloudSync.deleteThought(id);
-    cloudSync.saveThought(item);
       if (editingId === id) setEditingId(null);
     }
   };

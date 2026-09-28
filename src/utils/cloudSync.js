@@ -20,7 +20,7 @@ export const cloudSync = {
 
   // ================= 21天打卡挑战 (Challenge Logs) =================
   async getChallengeLogs() {
-    let local = initialChallengeLogs;
+    let local = [...initialChallengeLogs];
     try {
       const saved = localStorage.getItem('ink_challenge_logs');
       if (saved) {
@@ -42,8 +42,35 @@ export const cloudSync = {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.logs)) {
-          localStorage.setItem('ink_challenge_logs', JSON.stringify(data.logs));
-          return data.logs;
+          // 智能双向非破坏性合并
+          const map = new Map();
+          local.forEach(log => {
+            if (log && typeof log.day === 'number') {
+              map.set(log.day, log);
+            }
+          });
+
+          const remoteDaySet = new Set();
+          data.logs.forEach(rLog => {
+            if (rLog && typeof rLog.day === 'number') {
+              remoteDaySet.add(rLog.day);
+              map.set(rLog.day, rLog);
+            }
+          });
+
+          // 如果本地有远程尚未同步的记录，且处于创作者模式，静默补传云端
+          const isAuthor = localStorage.getItem('ink_author_mode') === 'true';
+          if (isAuthor) {
+            local.forEach(l => {
+              if (l && typeof l.day === 'number' && !remoteDaySet.has(l.day)) {
+                this.saveChallengeLog(l).catch(console.error);
+              }
+            });
+          }
+
+          const merged = Array.from(map.values()).sort((a, b) => a.day - b.day);
+          localStorage.setItem('ink_challenge_logs', JSON.stringify(merged));
+          return merged;
         }
       }
     } catch (err) {
@@ -60,7 +87,7 @@ export const cloudSync = {
     } catch {
       existing = [...initialChallengeLogs];
     }
-    const updated = [newLog, ...existing.filter(l => l.day !== newLog.day)];
+    const updated = [newLog, ...existing.filter(l => l.day !== newLog.day)].sort((a, b) => a.day - b.day);
     localStorage.setItem('ink_challenge_logs', JSON.stringify(updated));
 
     // 2. Cloud Save
@@ -139,11 +166,14 @@ export const cloudSync = {
 
   // ================= 灵感速记 (Thoughts Stream) =================
   async getThoughts() {
-    let local = initialThoughts;
+    let local = [...initialThoughts];
     try {
       const saved = localStorage.getItem('ink_user_thoughts');
       if (saved) {
-        local = JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          local = parsed;
+        }
       }
     } catch (e) {
       console.error('Failed reading local thoughts:', e);
@@ -158,8 +188,38 @@ export const cloudSync = {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.thoughts)) {
-          localStorage.setItem('ink_user_thoughts', JSON.stringify(data.thoughts));
-          return data.thoughts;
+          // 智能双向非破坏性合并
+          const map = new Map();
+          local.forEach(t => {
+            if (t && t.id) map.set(t.id, t);
+          });
+
+          const remoteIdSet = new Set();
+          data.thoughts.forEach(r => {
+            if (r && r.id) {
+              remoteIdSet.add(r.id);
+              map.set(r.id, r);
+            }
+          });
+
+          // 如果本地有尚未同步到云端的新速记，且处于作者模式，静默补传
+          const isAuthor = localStorage.getItem('ink_author_mode') === 'true';
+          if (isAuthor) {
+            local.forEach(t => {
+              if (t && t.id && !remoteIdSet.has(t.id)) {
+                this.saveThought(t).catch(console.error);
+              }
+            });
+          }
+
+          const merged = Array.from(map.values()).sort((a, b) => {
+            const dtA = `${a.date || ''} ${a.time || ''}`;
+            const dtB = `${b.date || ''} ${b.time || ''}`;
+            return dtB.localeCompare(dtA);
+          });
+
+          localStorage.setItem('ink_user_thoughts', JSON.stringify(merged));
+          return merged;
         }
       }
     } catch (err) {
@@ -249,11 +309,29 @@ export const cloudSync = {
 
   // ================= 点赞系统 (Target Likes) =================
   async getLikes() {
+    let local = {};
     try {
-      return JSON.parse(localStorage.getItem('ink_thought_likes') || '{}');
-    } catch {
-      return {};
+      local = JSON.parse(localStorage.getItem('ink_thought_likes') || '{}');
+    } catch {}
+
+    if (!API_BASE) return local;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/likes`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.likes && typeof data.likes === 'object') {
+          const merged = { ...local, ...data.likes };
+          localStorage.setItem('ink_thought_likes', JSON.stringify(merged));
+          return merged;
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch remote likes:', err);
     }
+    return local;
   },
 
   async incrementLike(targetId) {
