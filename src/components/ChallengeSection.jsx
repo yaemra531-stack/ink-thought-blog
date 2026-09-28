@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { cloudSync } from '../utils/cloudSync';
 import {
   Flame,
   Trophy,
@@ -37,6 +38,19 @@ export default function ChallengeSection({ isAuthor }) {
     }
     return initialChallengeLogs;
   });
+
+  useEffect(() => {
+    cloudSync.getChallengeLogs().then(remoteLogs => {
+      if (Array.isArray(remoteLogs) && remoteLogs.length > 0) {
+        setLogs(remoteLogs);
+        setSelectedDayDetail(prev => {
+          if (!prev) return remoteLogs[0];
+          const found = remoteLogs.find(l => l.day === prev.day);
+          return found || remoteLogs[0];
+        });
+      }
+    });
+  }, []);
 
   const [showForm, setShowForm] = useState(false);
   const [selectedDayDetail, setSelectedDayDetail] = useState(logs[0] || null);
@@ -120,6 +134,7 @@ export default function ChallengeSection({ isAuthor }) {
     setSelectedDayDetail(newLog);
     try {
       localStorage.setItem('ink_challenge_logs', JSON.stringify(updated));
+    cloudSync.saveChallengeLog(newLog);
     } catch (err) {
       console.error(err);
     }
@@ -174,6 +189,7 @@ export default function ChallengeSection({ isAuthor }) {
     const updatedDetail = updated.find(l => l.day === editingDay);
     if (updatedDetail) setSelectedDayDetail(updatedDetail);
     localStorage.setItem('ink_challenge_logs', JSON.stringify(updated));
+    cloudSync.saveChallengeLog(newLog);
 
     if (hasThought) {
       try {
@@ -202,6 +218,8 @@ export default function ChallengeSection({ isAuthor }) {
       const updated = logs.filter(l => l.day !== dayNum);
       setLogs(updated);
       localStorage.setItem('ink_challenge_logs', JSON.stringify(updated));
+      cloudSync.deleteChallengeLog(dayNum);
+    cloudSync.saveChallengeLog(newLog);
       if (selectedDayDetail && selectedDayDetail.day === dayNum) {
         setSelectedDayDetail(updated[0] || null);
       }

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { cloudSync } from '../utils/cloudSync';
 import { Sparkles, MapPin, Clock, Plus, Send, Heart, PenLine, Trash2, Check, X } from 'lucide-react';
 import initialThoughts from '../content/thoughts.json';
 
@@ -14,6 +15,14 @@ export default function ThoughtsStream({ isAuthor }) {
     }
     return initialThoughts;
   });
+
+  useEffect(() => {
+    cloudSync.getThoughts().then(remoteThoughts => {
+      if (Array.isArray(remoteThoughts) && remoteThoughts.length > 0) {
+        setThoughts(remoteThoughts);
+      }
+    });
+  }, []);
 
   const [newThought, setNewThought] = useState('');
   const [location, setLocation] = useState('');
@@ -48,6 +57,7 @@ export default function ThoughtsStream({ isAuthor }) {
     const updated = [item, ...thoughts];
     setThoughts(updated);
     localStorage.setItem('ink_user_thoughts', JSON.stringify(updated));
+    cloudSync.saveThought(item);
     setNewThought('');
     setLocation('');
     setShowInput(false);
@@ -76,6 +86,7 @@ export default function ThoughtsStream({ isAuthor }) {
 
     setThoughts(updated);
     localStorage.setItem('ink_user_thoughts', JSON.stringify(updated));
+    cloudSync.saveThought(item);
     setEditingId(null);
   };
 
@@ -90,6 +101,8 @@ export default function ThoughtsStream({ isAuthor }) {
       const updated = thoughts.filter(t => t.id !== id);
       setThoughts(updated);
       localStorage.setItem('ink_user_thoughts', JSON.stringify(updated));
+      cloudSync.deleteThought(id);
+    cloudSync.saveThought(item);
       if (editingId === id) setEditingId(null);
     }
   };
