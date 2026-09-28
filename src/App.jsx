@@ -24,25 +24,34 @@ export default function App() {
   const [selectedTag, setSelectedTag] = useState(null);
   const [isAuthor, setIsAuthor] = useState(() => {
     try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const authorParam = urlParams.get('author') || urlParams.get('admin');
-      if (authorParam && ['gas', 'curry', 'true'].includes(authorParam.toLowerCase())) {
-        localStorage.setItem('ink_author_mode', 'true');
-        return true;
+      if (typeof window !== "undefined") {
+        const hostname = window.location.hostname;
+        if (hostname === "localhost" || hostname === "127.0.0.1") {
+          return true; // 本地开发默认解锁站长创作模式
+        }
+        const urlParams = new URLSearchParams(window.location.search);
+        const authorParam = urlParams.get("author") || urlParams.get("admin");
+        if (authorParam && ["gas", "curry", "true"].includes(authorParam.toLowerCase())) {
+          localStorage.setItem("ink_author_mode", "true");
+          localStorage.setItem("ink_author_key", "gas");
+          return true;
+        }
+        return localStorage.getItem("ink_author_mode") === "true";
       }
-      return localStorage.getItem('ink_author_mode') === 'true';
     } catch {
       return false;
     }
+    return false;
   });
 
-  const handleToggleAuthorMode = () => {
-    const nextState = !isAuthor;
+  const handleToggleAuthorMode = (explicitVal) => {
+    const nextState = typeof explicitVal === "boolean" ? explicitVal : !isAuthor;
     setIsAuthor(nextState);
     if (nextState) {
-      localStorage.setItem('ink_author_mode', 'true');
+      localStorage.setItem("ink_author_mode", "true");
+      localStorage.setItem("ink_author_key", "gas");
     } else {
-      localStorage.removeItem('ink_author_mode');
+      localStorage.removeItem("ink_author_mode");
     }
   };
 
@@ -51,7 +60,14 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [newPostOpen, setNewPostOpen] = useState(false);
   const [editingPostForModal, setEditingPostForModal] = useState(null);
+  const [newPostInitialData, setNewPostInitialData] = useState(null);
   const [prefsOpen, setPrefsOpen] = useState(false);
+
+  const handleOpenNewPost = (initialData = null) => {
+    setEditingPostForModal(null);
+    setNewPostInitialData(initialData);
+    setNewPostOpen(true);
+  };
 
   // Reading Preferences State (persisted in localStorage)
   const [theme, setTheme] = useState(() => localStorage.getItem('ink_theme') || 'light');
@@ -165,7 +181,7 @@ export default function App() {
         theme={theme}
         setTheme={setTheme}
         onOpenSearch={() => setSearchOpen(true)}
-        onOpenNewPost={() => setNewPostOpen(true)}
+        onOpenNewPost={() => handleOpenNewPost()}
         onTogglePrefs={() => setPrefsOpen(!prefsOpen)}
         isZenMode={isZenMode}
         isAuthor={isAuthor}
@@ -251,10 +267,18 @@ export default function App() {
               <ReferenceSection
                 posts={posts}
                 onSelectPost={handleSelectPost}
+                onOpenNewPost={handleOpenNewPost}
+                isAuthor={isAuthor}
+                onToggleAuthorMode={handleToggleAuthorMode}
               />
             )}
 
-            {activeTab === 'thoughts' && <ThoughtsStream isAuthor={isAuthor} />}
+            {activeTab === 'thoughts' && (
+              <ThoughtsStream
+                isAuthor={isAuthor}
+                onToggleAuthorMode={handleToggleAuthorMode}
+              />
+            )}
 
             {activeTab === 'archive' && (
               <ArchiveView
@@ -263,10 +287,15 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'challenge' && <ChallengeSection isAuthor={isAuthor} />}
+            {activeTab === 'challenge' && (
+              <ChallengeSection
+                isAuthor={isAuthor}
+                onToggleAuthorMode={handleToggleAuthorMode}
+              />
+            )}
 
             {activeTab === 'about' && (
-              <AboutSection onOpenNewPost={() => setNewPostOpen(true)} />
+              <AboutSection onOpenNewPost={() => handleOpenNewPost()} />
             )}
           </>
         )}
@@ -295,10 +324,12 @@ export default function App() {
         onClose={() => {
           setNewPostOpen(false);
           setEditingPostForModal(null);
+          setNewPostInitialData(null);
         }}
         onSaveDraft={handleSaveDraft}
         postToEdit={editingPostForModal}
         onDeletePost={handleDeletePost}
+        initialData={newPostInitialData}
       />
 
       {/* Reading & Typography Preferences Modal */}

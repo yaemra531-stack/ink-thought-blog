@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { cloudSync } from '../utils/cloudSync';
-import { Sparkles, MapPin, Clock, Plus, Send, Heart, PenLine, Trash2, Check, X } from 'lucide-react';
-import initialThoughts from '../content/thoughts.json';
+import React, { useState, useEffect } from "react";
+import { cloudSync } from "../utils/cloudSync";
+import { Sparkles, MapPin, Clock, Plus, Send, Heart, PenLine, Trash2, Check, X, Lock } from "lucide-react";
+import initialThoughts from "../content/thoughts.json";
 
-export default function ThoughtsStream({ isAuthor }) {
+export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
   const [thoughts, setThoughts] = useState(() => {
     try {
-      const saved = localStorage.getItem('ink_user_thoughts');
+      const saved = localStorage.getItem("ink_user_thoughts");
       if (saved) {
         return JSON.parse(saved);
       }
@@ -24,52 +24,88 @@ export default function ThoughtsStream({ isAuthor }) {
     });
   }, []);
 
-  const [newThought, setNewThought] = useState('');
-  const [location, setLocation] = useState('');
+  const [newThought, setNewThought] = useState("");
+  const [location, setLocation] = useState("");
   const [showInput, setShowInput] = useState(false);
 
   // Edit states
   const [editingId, setEditingId] = useState(null);
-  const [editContent, setEditContent] = useState('');
-  const [editLocation, setEditLocation] = useState('');
+  const [editContent, setEditContent] = useState("");
+  const [editLocation, setEditLocation] = useState("");
 
   const [likes, setLikes] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('ink_thought_likes') || '{}');
+      return JSON.parse(localStorage.getItem("ink_thought_likes") || "{}");
     } catch {
       return {};
     }
   });
 
+  const ensureAuthorMode = () => {
+    if (isAuthor || localStorage.getItem("ink_author_mode") === "true") {
+      return true;
+    }
+    const pass = prompt("请输入站长通行口令解锁速记创作（默认口令：gas）：");
+    if (pass === "gas" || pass === "curry") {
+      localStorage.setItem("ink_author_mode", "true");
+      localStorage.setItem("ink_author_key", "gas");
+      if (onToggleAuthorMode) onToggleAuthorMode(true);
+      return true;
+    } else if (pass !== null) {
+      alert("口令不正确，仅站长可发布与编辑速记");
+    }
+    return false;
+  };
+
+  const handleToggleInput = () => {
+    if (!showInput) {
+      if (ensureAuthorMode()) {
+        setShowInput(true);
+      }
+    } else {
+      setShowInput(false);
+    }
+  };
+
   const handleAddThought = e => {
     e.preventDefault();
     if (!newThought.trim()) return;
 
+    if (!ensureAuthorMode()) return;
+
     const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+
     const item = {
       id: `t-${Date.now()}`,
-      date: now.toISOString().split('T')[0],
-      time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+      date: `${year}-${month}-${day}`,
+      time: `${hours}:${minutes}`,
       content: newThought.trim(),
-      location: location.trim() || '书房',
+      location: location.trim() || "书房",
     };
 
     const updated = [item, ...thoughts];
     setThoughts(updated);
-    localStorage.setItem('ink_user_thoughts', JSON.stringify(updated));
+    localStorage.setItem("ink_user_thoughts", JSON.stringify(updated));
     cloudSync.saveThought(item);
-    setNewThought('');
-    setLocation('');
+
+    setNewThought("");
+    setLocation("");
     setShowInput(false);
   };
 
   const handleStartEdit = item => {
+    if (!ensureAuthorMode()) return;
     setEditingId(item.id);
     setEditContent(item.content);
-    setEditLocation(item.location || '');
+    setEditLocation(item.location || "");
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = e => {
     e.preventDefault();
     if (!editContent.trim()) return;
 
@@ -87,7 +123,7 @@ export default function ThoughtsStream({ isAuthor }) {
     });
 
     setThoughts(updated);
-    localStorage.setItem('ink_user_thoughts', JSON.stringify(updated));
+    localStorage.setItem("ink_user_thoughts", JSON.stringify(updated));
     if (targetThought) {
       cloudSync.updateThought(targetThought.id, {
         content: targetThought.content,
@@ -99,15 +135,16 @@ export default function ThoughtsStream({ isAuthor }) {
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditContent('');
-    setEditLocation('');
+    setEditContent("");
+    setEditLocation("");
   };
 
-  const handleDeleteThought = (id) => {
-    if (confirm('确认删除这则速记吗？此操作无法撤销。')) {
+  const handleDeleteThought = id => {
+    if (!ensureAuthorMode()) return;
+    if (confirm("确认删除这则速记吗？此操作无法撤销。")) {
       const updated = thoughts.filter(t => t.id !== id);
       setThoughts(updated);
-      localStorage.setItem('ink_user_thoughts', JSON.stringify(updated));
+      localStorage.setItem("ink_user_thoughts", JSON.stringify(updated));
       cloudSync.deleteThought(id);
       if (editingId === id) setEditingId(null);
     }
@@ -116,8 +153,11 @@ export default function ThoughtsStream({ isAuthor }) {
   const handleToggleLike = id => {
     const updated = { ...likes, [id]: (likes[id] || 0) + 1 };
     setLikes(updated);
-    localStorage.setItem('ink_thought_likes', JSON.stringify(updated));
+    localStorage.setItem("ink_thought_likes", JSON.stringify(updated));
+    cloudSync.incrementLike(id);
   };
+
+  const isActuallyAuthor = isAuthor || (typeof window !== "undefined" && localStorage.getItem("ink_author_mode") === "true");
 
   return (
     <section className="thoughts-container">
@@ -127,40 +167,43 @@ export default function ThoughtsStream({ isAuthor }) {
           <h1 className="section-title">灵感速记与碎片</h1>
         </div>
         <p className="section-desc">
-          无需长篇大论。闪念的电光火石、偶遇的字句、黄昏的风与书页的翻动，皆是生活的微型诗。随时可编辑与修改。
+          无需长篇大论。闪念的电光火石、偶遇的字句、第一性原理思考与书页的翻动，皆是生活的微型诗。随时可记录、编辑与云端实时保存。
         </p>
 
-        {isAuthor && (
+        {/* Action Button: Always Visible & Direct */}
+        <div style={{ marginTop: "1rem" }}>
           <button
             className="add-thought-toggle-btn"
-            onClick={() => setShowInput(!showInput)}
+            onClick={handleToggleInput}
+            title={showInput ? "收起编辑器" : "起笔记录一则新速记"}
           >
             <Plus size={16} />
-            <span>{showInput ? '收起编辑器' : '记下一则灵感'}</span>
+            <span>{showInput ? "收起速记框" : "记下一则灵感"}</span>
           </button>
-        )}
+        </div>
       </div>
 
       {showInput && (
         <form className="new-thought-form animate-fade-in" onSubmit={handleAddThought}>
           <textarea
-            placeholder="记下此时此刻的思考、翻开书本看到的好句子..."
+            placeholder="记下此时此刻的思考、第一性原理、翻开书本看到的好句子..."
             value={newThought}
             onChange={e => setNewThought(e.target.value)}
-            rows={3}
+            rows={4}
             required
+            autoFocus
           />
           <div className="form-actions">
             <input
               type="text"
-              placeholder="地点或心境（例如：午后阳台、夜雨书房）"
+              placeholder="地点或心境（例如：午后阳台、写作研读 · 第一性原理）"
               value={location}
               onChange={e => setLocation(e.target.value)}
               className="location-input"
             />
             <button type="submit" className="submit-thought-btn">
               <Send size={14} />
-              <span>发布速记</span>
+              <span>立即发布速记</span>
             </button>
           </div>
         </form>
@@ -168,13 +211,13 @@ export default function ThoughtsStream({ isAuthor }) {
 
       <div className="thoughts-timeline">
         {thoughts.length === 0 ? (
-          <div className="empty-thoughts-box" style={{ padding: '3.5rem 1.5rem', textAlign: 'center', background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--border-medium)' }}>
-            <Sparkles size={28} style={{ color: 'var(--accent-primary)', marginBottom: '0.75rem', opacity: 0.8 }} />
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.45rem' }}>暂无速记碎片</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '38ch', margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
+          <div className="empty-thoughts-box" style={{ padding: "3.5rem 1.5rem", textAlign: "center", background: "var(--bg-card)", borderRadius: "var(--radius-lg)", border: "1px dashed var(--border-medium)" }}>
+            <Sparkles size={28} style={{ color: "var(--accent-primary)", marginBottom: "0.75rem", opacity: 0.8 }} />
+            <h3 style={{ fontSize: "1.2rem", marginBottom: "0.45rem" }}>暂无速记碎片</h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", maxWidth: "38ch", margin: "0 auto 1.5rem", lineHeight: 1.6 }}>
               生活里的顿悟与灵感转瞬即逝。点击上方“记下一则灵感”，捕捉你的第一条思考记录。
             </p>
-            <button className="submit-thought-btn" onClick={() => setShowInput(true)}>
+            <button className="submit-thought-btn" onClick={handleToggleInput}>
               <Plus size={14} /> <span>立即起笔记录</span>
             </button>
           </div>
@@ -200,7 +243,7 @@ export default function ThoughtsStream({ isAuthor }) {
                   <textarea
                     value={editContent}
                     onChange={e => setEditContent(e.target.value)}
-                    rows={3}
+                    rows={4}
                     className="challenge-textarea"
                     required
                     autoFocus
@@ -228,38 +271,36 @@ export default function ThoughtsStream({ isAuthor }) {
               ) : (
                 /* Display Mode */
                 <>
-                  <p className="thought-content">{item.content}</p>
+                  <p className="thought-content" style={{ whiteSpace: "pre-line" }}>{item.content}</p>
 
                   <div className="thought-footer">
                     <button
-                      className={`like-chip-btn ${(likes[item.id] || 0) > 0 ? 'liked' : ''}`}
+                      className={`like-chip-btn ${(likes[item.id] || 0) > 0 ? "liked" : ""}`}
                       onClick={() => handleToggleLike(item.id)}
                       aria-label="点赞速记"
                     >
-                      <Heart size={13} fill={(likes[item.id] || 0) > 0 ? 'currentColor' : 'none'} />
-                      <span>{(likes[item.id] || 0) > 0 ? likes[item.id] : '心动'}</span>
+                      <Heart size={13} fill={(likes[item.id] || 0) > 0 ? "currentColor" : "none"} />
+                      <span>{(likes[item.id] || 0) > 0 ? likes[item.id] : "心动"}</span>
                     </button>
 
-                    {isAuthor && (
-                      <div className="thought-manage-actions">
-                        <button
-                          className="thought-action-btn edit-btn"
-                          onClick={() => handleStartEdit(item)}
-                          title="编辑修改此条速记"
-                        >
-                          <PenLine size={13} />
-                          <span>编辑</span>
-                        </button>
-                        <button
-                          className="thought-action-btn delete-btn"
-                          onClick={() => handleDeleteThought(item.id)}
-                          title="删除此条速记"
-                        >
-                          <Trash2 size={13} />
-                          <span>删除</span>
-                        </button>
-                      </div>
-                    )}
+                    <div className="thought-manage-actions">
+                      <button
+                        className="thought-action-btn edit-btn"
+                        onClick={() => handleStartEdit(item)}
+                        title="编辑修改此条速记"
+                      >
+                        <PenLine size={13} />
+                        <span>编辑</span>
+                      </button>
+                      <button
+                        className="thought-action-btn delete-btn"
+                        onClick={() => handleDeleteThought(item.id)}
+                        title="删除此条速记"
+                      >
+                        <Trash2 size={13} />
+                        <span>删除</span>
+                      </button>
+                    </div>
                   </div>
                 </>
               )}

@@ -22,7 +22,22 @@ import {
 } from 'lucide-react';
 import { initialChallengeConfig, initialChallengeLogs } from '../content/challengeData';
 
-export default function ChallengeSection({ isAuthor }) {
+export default function ChallengeSection({ isAuthor, onToggleAuthorMode }) {
+  const ensureAuthorMode = () => {
+    if (isAuthor || (typeof window !== "undefined" && localStorage.getItem("ink_author_mode") === "true")) {
+      return true;
+    }
+    const pass = prompt("请输入站长通行口令解锁打卡记录（默认口令：gas）：");
+    if (pass === "gas" || pass === "curry") {
+      localStorage.setItem("ink_author_mode", "true");
+      localStorage.setItem("ink_author_key", "gas");
+      if (onToggleAuthorMode) onToggleAuthorMode(true);
+      return true;
+    } else if (pass !== null) {
+      alert("口令不正确，仅站长可提交打卡");
+    }
+    return false;
+  };
   const [logs, setLogs] = useState(() => {
     try {
       const saved = localStorage.getItem('ink_challenge_logs');
@@ -187,9 +202,11 @@ export default function ChallengeSection({ isAuthor }) {
 
     setLogs(updated);
     const updatedDetail = updated.find(l => l.day === editingDay);
-    if (updatedDetail) setSelectedDayDetail(updatedDetail);
+    if (updatedDetail) {
+      setSelectedDayDetail(updatedDetail);
+      cloudSync.saveChallengeLog(updatedDetail);
+    }
     localStorage.setItem('ink_challenge_logs', JSON.stringify(updated));
-    cloudSync.saveChallengeLog(newLog);
 
     if (hasThought) {
       try {
@@ -219,7 +236,6 @@ export default function ChallengeSection({ isAuthor }) {
       setLogs(updated);
       localStorage.setItem('ink_challenge_logs', JSON.stringify(updated));
       cloudSync.deleteChallengeLog(dayNum);
-    cloudSync.saveChallengeLog(newLog);
       if (selectedDayDetail && selectedDayDetail.day === dayNum) {
         setSelectedDayDetail(updated[0] || null);
       }
@@ -373,17 +389,21 @@ export default function ChallengeSection({ isAuthor }) {
             <h2 className="stamps-title">21 格打卡印章墙</h2>
             <p className="stamps-desc">点击已盖章卡片即可在下方查看当天的双轨实操与速记证词</p>
           </div>
-          {isAuthor && (
-            <div className="header-actions-group">
-              <button
-                className="action-stamp-btn"
-                onClick={() => setShowForm(!showForm)}
-              >
-                <Plus size={15} />
-                <span>{showForm ? '收起打卡面板' : '记今日打卡 (双轨独立)'}</span>
-              </button>
-            </div>
-          )}
+          <div className="header-actions-group">
+            <button
+              className="action-stamp-btn"
+              onClick={() => {
+                if (!showForm) {
+                  if (ensureAuthorMode()) setShowForm(true);
+                } else {
+                  setShowForm(false);
+                }
+              }}
+            >
+              <Plus size={15} />
+              <span>{showForm ? '收起打卡面板' : '记今日打卡 (双轨独立)'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Dual Input Form */}
@@ -575,26 +595,28 @@ export default function ChallengeSection({ isAuthor }) {
                     <Clock size={12} />
                     <span>{selectedDayDetail.date}</span>
                   </div>
-                  {isAuthor && (
-                    <div className="log-manage-btn-group">
-                      <button
-                        className="log-manage-btn edit"
-                        onClick={() => handleStartEditDay(selectedDayDetail)}
-                        title="编辑修改打卡"
-                      >
-                        <PenLine size={13} />
-                        <span>编辑</span>
-                      </button>
-                      <button
-                        className="log-manage-btn delete"
-                        onClick={() => handleDeleteDay(selectedDayDetail.day)}
-                        title="删除此天打卡"
-                      >
-                        <Trash2 size={13} />
-                        <span>删除</span>
-                      </button>
-                    </div>
-                  )}
+                  <div className="log-manage-btn-group">
+                    <button
+                      className="log-manage-btn edit"
+                      onClick={() => {
+                        if (ensureAuthorMode()) handleStartEditDay(selectedDayDetail);
+                      }}
+                      title="编辑修改打卡"
+                    >
+                      <PenLine size={13} />
+                      <span>编辑</span>
+                    </button>
+                    <button
+                      className="log-manage-btn delete"
+                      onClick={() => {
+                        if (ensureAuthorMode()) handleDeleteDay(selectedDayDetail.day);
+                      }}
+                      title="删除此天打卡"
+                    >
+                      <Trash2 size={13} />
+                      <span>删除</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BookMarked, ChevronDown, ChevronUp, Sparkles, CheckCircle2, ExternalLink, Lightbulb } from 'lucide-react';
+import React, { useState } from "react";
+import { BookMarked, ChevronDown, ChevronUp, Sparkles, CheckCircle2 } from "lucide-react";
 
 export default function WritingReferenceCard() {
   const [expanded, setExpanded] = useState(true);
@@ -20,8 +20,8 @@ export default function WritingReferenceCard() {
           <h2 className="ref-title">参考谁 · 学什么 · 看哪篇</h2>
         </div>
 
-        <button className="ref-toggle-btn" aria-label={expanded ? '收起卡片' : '展开卡片'}>
-          <span className="toggle-text">{expanded ? '收起指南' : '展开研读卡片'}</span>
+        <button className="ref-toggle-btn" aria-label={expanded ? "收起卡片" : "展开卡片"}>
+          <span className="toggle-text">{expanded ? "收起指南" : "展开研读卡片"}</span>
           {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
       </div>
@@ -78,6 +78,29 @@ export default function WritingReferenceCard() {
                 <span className="work-item">《Writing, Briefly》</span>
               </div>
             </div>
+
+            <div className="ref-author-box vasi-box">
+              <div className="author-tag-row">
+                <span className="author-name-tag" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10B981" }}>瓦斯</span>
+                <span className="author-role-sub">创作者第一性原理</span>
+              </div>
+              <h3 className="ref-core-thesis">受众心智的三层信任法则</h3>
+              <ul className="ref-learn-list">
+                <li>
+                  <strong>真实感（底线层）：</strong>是否本人真经历，一旦被识破是“演的”，后面技巧全失效。
+                </li>
+                <li>
+                  <strong>代入感（共鸣层）：</strong>日记体无需刻意戏剧反转，只需读者心底一句“我懂”。
+                </li>
+                <li>
+                  <strong>活人感（长效层）：</strong>粗糙不完美的记录比官方通稿更具生命力，像朋友隔桌夜谈。
+                </li>
+              </ul>
+              <div className="ref-works-row">
+                <span className="works-label">研读代表作：</span>
+                <span className="work-item">《选拔标准与写作的第一性原理》</span>
+              </div>
+            </div>
           </div>
 
           {/* 5-minute pre-writing checklist */}
@@ -87,10 +110,11 @@ export default function WritingReferenceCard() {
               <span>每次下笔前的 5 分钟自检清单：</span>
             </div>
             <div className="checklist-items">
-              <span className="check-chip">1. 切入点是否真实？</span>
+              <span className="check-chip">1. 切入点是否真实经历？</span>
               <span className="check-chip">2. 是否有具象的类比或场景？</span>
               <span className="check-chip">3. 念出声是否像在说话？</span>
               <span className="check-chip">4. 能否再删掉 20% 的冗余废话？</span>
+              <span className="check-chip" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#10B981", borderColor: "rgba(16, 185, 129, 0.3)" }}>5. 真实感与活人感是否在线？</span>
             </div>
           </div>
         </div>

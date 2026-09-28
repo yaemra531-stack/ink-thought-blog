@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Download, Copy, Check, Eye, Code, Sparkles, FolderDown, Save, Trash2 } from 'lucide-react';
 import { renderMarkdown } from '../utils/markdownParser';
 
-export default function NewPostModal({ isOpen, onClose, onSaveDraft, postToEdit, onDeletePost }) {
+export default function NewPostModal({ isOpen, onClose, onSaveDraft, postToEdit, onDeletePost, initialData }) {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [tags, setTags] = useState('思考随笔, 设计美学');
@@ -21,6 +21,24 @@ export default function NewPostModal({ isOpen, onClose, onSaveDraft, postToEdit,
       setExcerpt(postToEdit.excerpt || '');
       setAuthor(postToEdit.author || '我');
       setContent(postToEdit.content || postToEdit.rawContent || '');
+    } else if (initialData) {
+      setTitle(initialData.title || '');
+      setSlug(initialData.slug || (initialData.title ? initialData.title.toLowerCase().replace(/[^\w\u4e00-\u9fa5-]+/g, '-') : ''));
+      setTags(initialData.tags || '经典研读, 写作参考');
+      setExcerpt(initialData.excerpt || '');
+      setAuthor(initialData.author || '瓦斯');
+      setContent(initialData.content || `## 研读心法与第一性原理
+
+记录你对经典篇目（Tim Urban / Paul Graham）或受众心智的拆解与心得。
+
+### 核心论点与启示
+
+> “日记体不需要反转，只需要‘我懂’。”
+
+- 思考一：真实感是一票否决权
+- 思考二：代入感构建共鸣
+- 思考三：活人感建立终身陪伴
+`);
     } else {
       setTitle('');
       setSlug('');
@@ -39,7 +57,7 @@ export default function NewPostModal({ isOpen, onClose, onSaveDraft, postToEdit,
 - 思考二
 `);
     }
-  }, [postToEdit, isOpen]);
+  }, [postToEdit, isOpen, initialData]);
 
   if (!isOpen) return null;
 
