@@ -1582,6 +1582,287 @@
   margin: 0.6rem 0;
 }
 
+
+/* ==========================================================
+   THOUGHT WORKSPACE MODAL (LARGE ADAPTIVE DUAL-PANE)
+   ========================================================== */
+.thought-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.thought-workspace-modal {
+  width: 92vw;
+  max-width: 1160px;
+  height: 86vh;
+  max-height: 880px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.thought-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.15rem 1.75rem;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-card);
+}
+
+.thought-modal-header .modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.thought-modal-header .modal-badge {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-full);
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+}
+
+.thought-modal-header h3 {
+  margin: 0;
+  font-size: 1.22rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.thought-workspace-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1.75rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.thought-shortcut-hint {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.thought-shortcut-hint code {
+  padding: 0.12rem 0.35rem;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  font-size: 0.72rem;
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+}
+
+.thought-workspace-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  padding: 1.25rem 1.75rem;
+  overflow: hidden;
+  min-height: 0;
+  background: var(--bg-card);
+}
+
+.thought-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+}
+
+.thought-pane .pane-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.55rem;
+}
+
+.thought-pane .pane-title {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.thought-pane .pane-desc {
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.thought-workspace-textarea {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  resize: none;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  line-height: 1.75;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow-y: auto;
+}
+
+.thought-workspace-textarea:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.thought-preview-card-wrap {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  padding: 1rem;
+}
+
+.preview-simulated-card {
+  margin: 0 !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-light) !important;
+  box-shadow: var(--shadow-sm);
+  min-height: 100%;
+}
+
+.thought-workspace-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.75rem;
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.footer-location-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 240px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  padding: 0.45rem 0.85rem;
+}
+
+.footer-location-wrap .location-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.workspace-location-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.footer-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-cancel-workspace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.48rem 1.15rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-cancel-workspace:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
+.btn-submit-workspace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.35rem;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--accent-primary);
+  color: #FFFFFF;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.btn-submit-workspace:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 860px) {
+  .thought-workspace-modal {
+    width: 96vw;
+    height: 92vh;
+  }
+  .thought-workspace-body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .thought-pane {
+    height: auto;
+    min-height: 240px;
+  }
+  .thought-workspace-textarea {
+    min-height: 220px;
+  }
+  .thought-preview-pane {
+    min-height: 240px;
+  }
+}
+
 /* Thought Editor Toolbar & Preview */
 .thought-editor-toolbar {
   display: flex;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { cloudSync } from "../utils/cloudSync";
 import { renderMarkdown } from "../utils/markdownParser";
 import {
@@ -17,7 +17,9 @@ import {
   Bold,
   List,
   Quote,
-  Lightbulb
+  Lightbulb,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import initialThoughts from "../content/thoughts.json";
 
@@ -42,16 +44,13 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
     });
   }, []);
 
-  const [newThought, setNewThought] = useState("");
-  const [location, setLocation] = useState("");
-  const [showInput, setShowInput] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
-
-  // Edit states
-  const [editingId, setEditingId] = useState(null);
-  const [editContent, setEditContent] = useState("");
-  const [editLocation, setEditLocation] = useState("");
-  const [isEditPreviewMode, setIsEditPreviewMode] = useState(false);
+  // Modal Workspace States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("create"); // "create" | "edit"
+  const [editingThoughtId, setEditingThoughtId] = useState(null);
+  const [modalContent, setModalContent] = useState("");
+  const [modalLocation, setModalLocation] = useState("");
+  const textareaRef = useRef(null);
 
   const [likes, setLikes] = useState(() => {
     try {
@@ -77,118 +76,112 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
     return false;
   };
 
-  const handleToggleInput = () => {
-    if (!showInput) {
-      if (ensureAuthorMode()) {
-        setShowInput(true);
-      }
-    } else {
-      setShowInput(false);
-    }
+  const handleOpenCreateModal = () => {
+    if (!ensureAuthorMode()) return;
+    setModalMode("create");
+    setEditingThoughtId(null);
+    setModalContent("");
+    setModalLocation("");
+    setIsModalOpen(true);
   };
 
+  const handleOpenEditModal = item => {
+    if (!ensureAuthorMode()) return;
+    setModalMode("edit");
+    setEditingThoughtId(item.id);
+    setModalContent(item.content);
+    setModalLocation(item.location || "");
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingThoughtId(null);
+    setModalContent("");
+    setModalLocation("");
+  };
+
+  // Quick template insertions
   const handleInsertTemplate = type => {
     if (type === "cognition-action") {
       const template = "## 认知\n\n\n## 做法\n- ";
-      setNewThought(prev => (prev ? `${prev}\n\n${template}` : template));
+      setModalContent(prev => (prev ? `${prev}\n\n${template}` : template));
     } else if (type === "bold") {
-      setNewThought(prev => `${prev}**重点**`);
+      setModalContent(prev => (prev ? `${prev}**重点**` : "**重点**"));
     } else if (type === "list") {
-      setNewThought(prev => (prev ? `${prev}\n- ` : "- "));
+      setModalContent(prev => (prev ? `${prev}\n- ` : "- "));
     } else if (type === "quote") {
-      setNewThought(prev => (prev ? `${prev}\n> ` : "> "));
+      setModalContent(prev => (prev ? `${prev}\n> ` : "> "));
     }
-    setIsPreviewMode(false);
-  };
-
-  const handleInsertEditTemplate = type => {
-    if (type === "cognition-action") {
-      const template = "## 认知\n\n\n## 做法\n- ";
-      setEditContent(prev => (prev ? `${prev}\n\n${template}` : template));
-    } else if (type === "bold") {
-      setEditContent(prev => `${prev}**重点**`);
-    } else if (type === "list") {
-      setEditContent(prev => (prev ? `${prev}\n- ` : "- "));
-    } else if (type === "quote") {
-      setEditContent(prev => (prev ? `${prev}\n> ` : "> "));
+    if (textareaRef.current) {
+      textareaRef.current.focus();
     }
-    setIsEditPreviewMode(false);
   };
 
-  const handleAddThought = e => {
-    e.preventDefault();
-    if (!newThought.trim()) return;
-
-    if (!ensureAuthorMode()) return;
-
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-
-    const item = {
-      id: `t-${Date.now()}`,
-      date: `${year}-${month}-${day}`,
-      time: `${hours}:${minutes}`,
-      content: newThought.trim(),
-      location: location.trim() || "书房",
-    };
-
-    const updated = [item, ...thoughts];
-    setThoughts(updated);
-    localStorage.setItem("ink_user_thoughts", JSON.stringify(updated));
-    cloudSync.saveThought(item);
-
-    setNewThought("");
-    setLocation("");
-    setIsPreviewMode(false);
-    setShowInput(false);
-  };
-
-  const handleStartEdit = item => {
-    if (!ensureAuthorMode()) return;
-    setEditingId(item.id);
-    setEditContent(item.content);
-    setEditLocation(item.location || "");
-    setIsEditPreviewMode(false);
-  };
-
-  const handleSaveEdit = e => {
-    e.preventDefault();
-    if (!editContent.trim()) return;
-
-    let targetThought = null;
-    const updated = thoughts.map(t => {
-      if (t.id === editingId) {
-        targetThought = {
-          ...t,
-          content: editContent.trim(),
-          location: editLocation.trim() || t.location,
-        };
-        return targetThought;
+  // Keyboard shortcut listener: ESC to close, Cmd+Enter to submit
+  useEffect(() => {
+    const handleKeyDown = e => {
+      if (!isModalOpen) return;
+      if (e.key === "Escape") {
+        handleCloseModal();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        handleSubmitModal(e);
       }
-      return t;
-    });
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isModalOpen, modalContent, modalLocation, modalMode, editingThoughtId, thoughts]);
 
-    setThoughts(updated);
-    localStorage.setItem("ink_user_thoughts", JSON.stringify(updated));
-    if (targetThought) {
-      cloudSync.updateThought(targetThought.id, {
-        content: targetThought.content,
-        location: targetThought.location,
+  const handleSubmitModal = e => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!modalContent.trim()) return;
+    if (!ensureAuthorMode()) return;
+
+    if (modalMode === "create") {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+
+      const item = {
+        id: `t-${Date.now()}`,
+        date: `${year}-${month}-${day}`,
+        time: `${hours}:${minutes}`,
+        content: modalContent.trim(),
+        location: modalLocation.trim() || "书房",
+      };
+
+      const updated = [item, ...thoughts];
+      setThoughts(updated);
+      localStorage.setItem("ink_user_thoughts", JSON.stringify(updated));
+      cloudSync.saveThought(item);
+    } else if (modalMode === "edit" && editingThoughtId) {
+      let targetThought = null;
+      const updated = thoughts.map(t => {
+        if (t.id === editingThoughtId) {
+          targetThought = {
+            ...t,
+            content: modalContent.trim(),
+            location: modalLocation.trim() || t.location,
+          };
+          return targetThought;
+        }
+        return t;
       });
-    }
-    setEditingId(null);
-    setIsEditPreviewMode(false);
-  };
 
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditContent("");
-    setEditLocation("");
-    setIsEditPreviewMode(false);
+      setThoughts(updated);
+      localStorage.setItem("ink_user_thoughts", JSON.stringify(updated));
+      if (targetThought) {
+        cloudSync.updateThought(targetThought.id, {
+          content: targetThought.content,
+          location: targetThought.location,
+        });
+      }
+    }
+
+    handleCloseModal();
   };
 
   const handleDeleteThought = id => {
@@ -198,7 +191,6 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
       setThoughts(updated);
       localStorage.setItem("ink_user_thoughts", JSON.stringify(updated));
       cloudSync.deleteThought(id);
-      if (editingId === id) setEditingId(null);
     }
   };
 
@@ -209,11 +201,6 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
     cloudSync.incrementLike(id);
   };
 
-  const isActuallyAuthor =
-    isAuthor ||
-    (typeof window !== "undefined" &&
-      localStorage.getItem("ink_author_mode") === "true");
-
   return (
     <section className="thoughts-container">
       <div className="section-intro">
@@ -222,120 +209,197 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
           <h1 className="section-title">灵感速记与碎片</h1>
         </div>
         <p className="section-desc">
-          无需长篇大论。闪念的电光火石、偶遇的字句、认知与做法的顿悟，皆是生活的微型诗。支持 Markdown 排版，随时可记录、编辑与云端实时保存。
+          无需长篇大论。闪念的电光火石、偶遇的字句、认知与做法的顿悟，皆是生活的微型诗。全景双栏实时预览，随时记录、编辑与云端实时保存。
         </p>
 
-        {/* Action Button: Always Visible & Direct */}
+        {/* Action Button: Opens Large Workspace Modal */}
         <div style={{ marginTop: "1rem" }}>
           <button
             className="add-thought-toggle-btn"
-            onClick={handleToggleInput}
-            title={showInput ? "收起编辑器" : "起笔记录一则新速记"}
+            onClick={handleOpenCreateModal}
+            title="起笔记录一则新速记"
           >
             <Plus size={16} />
-            <span>{showInput ? "收起速记框" : "记下一则灵感"}</span>
+            <span>记下一则灵感</span>
           </button>
         </div>
       </div>
 
-      {showInput && (
-        <form className="new-thought-form animate-fade-in" onSubmit={handleAddThought}>
-          {/* Markdown Quick Toolbar */}
-          <div className="thought-editor-toolbar">
-            <div className="thought-toolbar-left">
+      {/* Large Responsive Workspace Modal with Split-Pane Live Preview */}
+      {isModalOpen && (
+        <div className="thought-modal-backdrop" onClick={handleCloseModal}>
+          <div
+            className="thought-workspace-modal animate-scale-up"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="thought-modal-header">
+              <div className="modal-title-wrap">
+                <span className="modal-badge">
+                  {modalMode === "create" ? "速记工作台" : "编辑速记"}
+                </span>
+                <h3>
+                  {modalMode === "create"
+                    ? "起笔记录一则灵感"
+                    : "编辑与修改这则速记"}
+                </h3>
+              </div>
               <button
-                type="button"
-                className="thought-tool-chip accent-chip"
-                onClick={() => handleInsertTemplate("cognition-action")}
-                title="一键插入【认知与做法】极简结构"
+                className="close-modal-btn"
+                onClick={handleCloseModal}
+                aria-label="关闭窗口"
               >
-                <Lightbulb size={13} />
-                <span>+ 认知与做法</span>
-              </button>
-              <button
-                type="button"
-                className="thought-tool-chip"
-                onClick={() => handleInsertTemplate("bold")}
-                title="插入加粗"
-              >
-                <Bold size={13} />
-                <span>加粗</span>
-              </button>
-              <button
-                type="button"
-                className="thought-tool-chip"
-                onClick={() => handleInsertTemplate("list")}
-                title="插入列表项"
-              >
-                <List size={13} />
-                <span>列表</span>
-              </button>
-              <button
-                type="button"
-                className="thought-tool-chip"
-                onClick={() => handleInsertTemplate("quote")}
-                title="插入金句引用"
-              >
-                <Quote size={13} />
-                <span>金句</span>
+                <X size={18} />
               </button>
             </div>
-            <div className="thought-toolbar-right">
-              <button
-                type="button"
-                className={`thought-mode-tab ${!isPreviewMode ? "active" : ""}`}
-                onClick={() => setIsPreviewMode(false)}
-              >
-                <PenLine size={12} />
-                <span>编辑</span>
-              </button>
-              <button
-                type="button"
-                className={`thought-mode-tab ${isPreviewMode ? "active" : ""}`}
-                onClick={() => setIsPreviewMode(true)}
-              >
-                <Eye size={12} />
-                <span>预览</span>
-              </button>
+
+            {/* Markdown Quick Toolbar */}
+            <div className="thought-workspace-toolbar">
+              <div className="thought-toolbar-left">
+                <button
+                  type="button"
+                  className="thought-tool-chip accent-chip"
+                  onClick={() => handleInsertTemplate("cognition-action")}
+                  title="一键插入【认知与做法】标准极简结构"
+                >
+                  <Lightbulb size={13} />
+                  <span>+ 认知与做法</span>
+                </button>
+                <button
+                  type="button"
+                  className="thought-tool-chip"
+                  onClick={() => handleInsertTemplate("bold")}
+                  title="插入加粗语法"
+                >
+                  <Bold size={13} />
+                  <span>加粗</span>
+                </button>
+                <button
+                  type="button"
+                  className="thought-tool-chip"
+                  onClick={() => handleInsertTemplate("list")}
+                  title="插入列表项"
+                >
+                  <List size={13} />
+                  <span>列表</span>
+                </button>
+                <button
+                  type="button"
+                  className="thought-tool-chip"
+                  onClick={() => handleInsertTemplate("quote")}
+                  title="插入金句引用"
+                >
+                  <Quote size={13} />
+                  <span>金句</span>
+                </button>
+              </div>
+
+              <div className="thought-toolbar-right">
+                <span className="thought-shortcut-hint">
+                  快捷键：<code>⌘ + Enter</code> 保存 · <code>ESC</code> 退出
+                </span>
+              </div>
+            </div>
+
+            {/* Split Screen Dual-Pane Body */}
+            <div className="thought-workspace-body">
+              {/* Left Pane: Markdown Source Editor */}
+              <div className="thought-pane thought-editor-pane">
+                <div className="pane-header">
+                  <span className="pane-title">Markdown 写作区</span>
+                  <span className="pane-desc">支持标题、列表、加粗、引用与换行</span>
+                </div>
+                <textarea
+                  ref={textareaRef}
+                  className="thought-workspace-textarea"
+                  placeholder="记下此时此刻的思考、认知与做法、好句子...
+
+推荐点击上方 [+ 认知与做法] 快捷填入极简闭环。"
+                  value={modalContent}
+                  onChange={e => setModalContent(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              {/* Right Pane: Real-Time Rendered Preview */}
+              <div className="thought-pane thought-preview-pane">
+                <div className="pane-header">
+                  <span className="pane-title">实时卡片效果</span>
+                  <span className="pane-desc">所见即所得 · 真实渲染呈现</span>
+                </div>
+                <div className="thought-preview-card-wrap">
+                  <div className="thought-card preview-simulated-card">
+                    <div className="thought-header">
+                      <span className="thought-meta">
+                        <Clock size={12} />
+                        <span>刚刚 (实时)</span>
+                      </span>
+                      <span className="thought-location">
+                        <MapPin size={11} />
+                        <span>{modalLocation.trim() || "书房"}</span>
+                      </span>
+                    </div>
+
+                    <div
+                      className="thought-content thought-markdown-body"
+                      dangerouslySetInnerHTML={{
+                        __html: renderMarkdown(
+                          modalContent.trim() ||
+                            "*（在左侧键入 Markdown 内容，此处将秒级同步实时呈现真实卡片排版...）*"
+                        ),
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="thought-workspace-footer">
+              <div className="footer-location-wrap">
+                <MapPin size={15} className="location-icon" />
+                <input
+                  type="text"
+                  placeholder="记录地点或心境（例如：午后阳台、雅思备考 · 阅读）"
+                  value={modalLocation}
+                  onChange={e => setModalLocation(e.target.value)}
+                  className="workspace-location-input"
+                />
+              </div>
+
+              <div className="footer-btn-group">
+                <button
+                  type="button"
+                  className="btn-cancel-workspace"
+                  onClick={handleCloseModal}
+                >
+                  <X size={14} />
+                  <span>取消</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-submit-workspace"
+                  onClick={handleSubmitModal}
+                >
+                  {modalMode === "create" ? (
+                    <>
+                      <Send size={14} />
+                      <span>立即发布速记</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={14} />
+                      <span>保存修改</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-
-          {isPreviewMode ? (
-            <div
-              className="thought-preview-box thought-markdown-body"
-              dangerouslySetInnerHTML={{
-                __html: renderMarkdown(
-                  newThought.trim() || "*（输入内容后在此实时预览 Markdown 排版效果）*"
-                ),
-              }}
-            />
-          ) : (
-            <textarea
-              placeholder="记下此时此刻的思考、认知与做法、好句子（支持 Markdown 排版）..."
-              value={newThought}
-              onChange={e => setNewThought(e.target.value)}
-              rows={5}
-              required
-              autoFocus
-            />
-          )}
-
-          <div className="form-actions">
-            <input
-              type="text"
-              placeholder="地点或心境（例如：午后阳台、写作研读 · 第一性原理）"
-              value={location}
-              onChange={e => setLocation(e.target.value)}
-              className="location-input"
-            />
-            <button type="submit" className="submit-thought-btn">
-              <Send size={14} />
-              <span>立即发布速记</span>
-            </button>
-          </div>
-        </form>
+        </div>
       )}
 
+      {/* Thoughts Feed List */}
       <div className="thoughts-timeline">
         {thoughts.length === 0 ? (
           <div
@@ -370,7 +434,7 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
             >
               生活里的顿悟与灵感转瞬即逝。点击上方“记下一则灵感”，捕捉你的第一条思考记录。
             </p>
-            <button className="submit-thought-btn" onClick={handleToggleInput}>
+            <button className="submit-thought-btn" onClick={handleOpenCreateModal}>
               <Plus size={14} /> <span>立即起笔记录</span>
             </button>
           </div>
@@ -396,158 +460,48 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
                 )}
               </div>
 
-              {editingId === item.id ? (
-                /* Inline Edit Mode */
-                <form
-                  className="inline-edit-thought-form animate-fade-in"
-                  onSubmit={handleSaveEdit}
+              {/* Display Mode */}
+              <div
+                className="thought-content thought-markdown-body"
+                dangerouslySetInnerHTML={{
+                  __html: renderMarkdown(item.content || ""),
+                }}
+              />
+
+              <div className="thought-footer">
+                <button
+                  className={`like-chip-btn ${(likes[item.id] || 0) > 0 ? "liked" : ""}`}
+                  onClick={() => handleToggleLike(item.id)}
+                  aria-label="点赞速记"
                 >
-                  <div className="thought-editor-toolbar inline-toolbar">
-                    <div className="thought-toolbar-left">
-                      <button
-                        type="button"
-                        className="thought-tool-chip accent-chip"
-                        onClick={() => handleInsertEditTemplate("cognition-action")}
-                        title="一键插入【认知与做法】"
-                      >
-                        <Lightbulb size={12} />
-                        <span>+ 认知与做法</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="thought-tool-chip"
-                        onClick={() => handleInsertEditTemplate("bold")}
-                      >
-                        <Bold size={12} />
-                        <span>加粗</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="thought-tool-chip"
-                        onClick={() => handleInsertEditTemplate("list")}
-                      >
-                        <List size={12} />
-                        <span>列表</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="thought-tool-chip"
-                        onClick={() => handleInsertEditTemplate("quote")}
-                      >
-                        <Quote size={12} />
-                        <span>金句</span>
-                      </button>
-                    </div>
-                    <div className="thought-toolbar-right">
-                      <button
-                        type="button"
-                        className={`thought-mode-tab ${!isEditPreviewMode ? "active" : ""}`}
-                        onClick={() => setIsEditPreviewMode(false)}
-                      >
-                        <PenLine size={11} />
-                        <span>编辑</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={`thought-mode-tab ${isEditPreviewMode ? "active" : ""}`}
-                        onClick={() => setIsEditPreviewMode(true)}
-                      >
-                        <Eye size={11} />
-                        <span>预览</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {isEditPreviewMode ? (
-                    <div
-                      className="thought-preview-box thought-markdown-body"
-                      dangerouslySetInnerHTML={{
-                        __html: renderMarkdown(
-                          editContent.trim() || "*（暂无内容）*"
-                        ),
-                      }}
-                    />
-                  ) : (
-                    <textarea
-                      value={editContent}
-                      onChange={e => setEditContent(e.target.value)}
-                      rows={5}
-                      className="challenge-textarea"
-                      required
-                      autoFocus
-                    />
-                  )}
-
-                  <div className="inline-edit-actions">
-                    <input
-                      type="text"
-                      placeholder="地点或心境"
-                      value={editLocation}
-                      onChange={e => setEditLocation(e.target.value)}
-                      className="location-input small-loc-input"
-                    />
-                    <div className="btn-group-right">
-                      <button
-                        type="button"
-                        className="btn-cancel-edit"
-                        onClick={handleCancelEdit}
-                      >
-                        <X size={13} />
-                        <span>取消</span>
-                      </button>
-                      <button type="submit" className="btn-save-edit">
-                        <Check size={13} />
-                        <span>保存修改</span>
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              ) : (
-                /* Display Mode */
-                <>
-                  <div
-                    className="thought-content thought-markdown-body"
-                    dangerouslySetInnerHTML={{
-                      __html: renderMarkdown(item.content || ""),
-                    }}
+                  <Heart
+                    size={13}
+                    fill={(likes[item.id] || 0) > 0 ? "currentColor" : "none"}
                   />
+                  <span>
+                    {(likes[item.id] || 0) > 0 ? likes[item.id] : "心动"}
+                  </span>
+                </button>
 
-                  <div className="thought-footer">
-                    <button
-                      className={`like-chip-btn ${(likes[item.id] || 0) > 0 ? "liked" : ""}`}
-                      onClick={() => handleToggleLike(item.id)}
-                      aria-label="点赞速记"
-                    >
-                      <Heart
-                        size={13}
-                        fill={(likes[item.id] || 0) > 0 ? "currentColor" : "none"}
-                      />
-                      <span>
-                        {(likes[item.id] || 0) > 0 ? likes[item.id] : "心动"}
-                      </span>
-                    </button>
-
-                    <div className="thought-manage-actions">
-                      <button
-                        className="thought-action-btn edit-btn"
-                        onClick={() => handleStartEdit(item)}
-                        title="编辑修改此条速记"
-                      >
-                        <PenLine size={13} />
-                        <span>编辑</span>
-                      </button>
-                      <button
-                        className="thought-action-btn delete-btn"
-                        onClick={() => handleDeleteThought(item.id)}
-                        title="删除此条速记"
-                      >
-                        <Trash2 size={13} />
-                        <span>删除</span>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
+                <div className="thought-manage-actions">
+                  <button
+                    className="thought-action-btn edit-btn"
+                    onClick={() => handleOpenEditModal(item)}
+                    title="在工作台全景编辑修改此条速记"
+                  >
+                    <PenLine size={13} />
+                    <span>编辑</span>
+                  </button>
+                  <button
+                    className="thought-action-btn delete-btn"
+                    onClick={() => handleDeleteThought(item.id)}
+                    title="删除此条速记"
+                  >
+                    <Trash2 size={13} />
+                    <span>删除</span>
+                  </button>
+                </div>
+              </div>
             </article>
           ))
         )}
