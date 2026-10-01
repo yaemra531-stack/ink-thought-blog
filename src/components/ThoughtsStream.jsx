@@ -1,6 +1,24 @@
 import React, { useState, useEffect } from "react";
 import { cloudSync } from "../utils/cloudSync";
-import { Sparkles, MapPin, Clock, Plus, Send, Heart, PenLine, Trash2, Check, X, Lock } from "lucide-react";
+import { renderMarkdown } from "../utils/markdownParser";
+import {
+  Sparkles,
+  MapPin,
+  Clock,
+  Plus,
+  Send,
+  Heart,
+  PenLine,
+  Trash2,
+  Check,
+  X,
+  Lock,
+  Eye,
+  Bold,
+  List,
+  Quote,
+  Lightbulb
+} from "lucide-react";
 import initialThoughts from "../content/thoughts.json";
 
 export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
@@ -27,11 +45,13 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
   const [newThought, setNewThought] = useState("");
   const [location, setLocation] = useState("");
   const [showInput, setShowInput] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // Edit states
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState("");
   const [editLocation, setEditLocation] = useState("");
+  const [isEditPreviewMode, setIsEditPreviewMode] = useState(false);
 
   const [likes, setLikes] = useState(() => {
     try {
@@ -67,6 +87,34 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
     }
   };
 
+  const handleInsertTemplate = type => {
+    if (type === "cognition-action") {
+      const template = "## 认知\n\n\n## 做法\n- ";
+      setNewThought(prev => (prev ? `${prev}\n\n${template}` : template));
+    } else if (type === "bold") {
+      setNewThought(prev => `${prev}**重点**`);
+    } else if (type === "list") {
+      setNewThought(prev => (prev ? `${prev}\n- ` : "- "));
+    } else if (type === "quote") {
+      setNewThought(prev => (prev ? `${prev}\n> ` : "> "));
+    }
+    setIsPreviewMode(false);
+  };
+
+  const handleInsertEditTemplate = type => {
+    if (type === "cognition-action") {
+      const template = "## 认知\n\n\n## 做法\n- ";
+      setEditContent(prev => (prev ? `${prev}\n\n${template}` : template));
+    } else if (type === "bold") {
+      setEditContent(prev => `${prev}**重点**`);
+    } else if (type === "list") {
+      setEditContent(prev => (prev ? `${prev}\n- ` : "- "));
+    } else if (type === "quote") {
+      setEditContent(prev => (prev ? `${prev}\n> ` : "> "));
+    }
+    setIsEditPreviewMode(false);
+  };
+
   const handleAddThought = e => {
     e.preventDefault();
     if (!newThought.trim()) return;
@@ -95,6 +143,7 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
 
     setNewThought("");
     setLocation("");
+    setIsPreviewMode(false);
     setShowInput(false);
   };
 
@@ -103,6 +152,7 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
     setEditingId(item.id);
     setEditContent(item.content);
     setEditLocation(item.location || "");
+    setIsEditPreviewMode(false);
   };
 
   const handleSaveEdit = e => {
@@ -131,12 +181,14 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
       });
     }
     setEditingId(null);
+    setIsEditPreviewMode(false);
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditContent("");
     setEditLocation("");
+    setIsEditPreviewMode(false);
   };
 
   const handleDeleteThought = id => {
@@ -157,7 +209,10 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
     cloudSync.incrementLike(id);
   };
 
-  const isActuallyAuthor = isAuthor || (typeof window !== "undefined" && localStorage.getItem("ink_author_mode") === "true");
+  const isActuallyAuthor =
+    isAuthor ||
+    (typeof window !== "undefined" &&
+      localStorage.getItem("ink_author_mode") === "true");
 
   return (
     <section className="thoughts-container">
@@ -167,7 +222,7 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
           <h1 className="section-title">灵感速记与碎片</h1>
         </div>
         <p className="section-desc">
-          无需长篇大论。闪念的电光火石、偶遇的字句、第一性原理思考与书页的翻动，皆是生活的微型诗。随时可记录、编辑与云端实时保存。
+          无需长篇大论。闪念的电光火石、偶遇的字句、认知与做法的顿悟，皆是生活的微型诗。支持 Markdown 排版，随时可记录、编辑与云端实时保存。
         </p>
 
         {/* Action Button: Always Visible & Direct */}
@@ -185,14 +240,86 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
 
       {showInput && (
         <form className="new-thought-form animate-fade-in" onSubmit={handleAddThought}>
-          <textarea
-            placeholder="记下此时此刻的思考、第一性原理、翻开书本看到的好句子..."
-            value={newThought}
-            onChange={e => setNewThought(e.target.value)}
-            rows={4}
-            required
-            autoFocus
-          />
+          {/* Markdown Quick Toolbar */}
+          <div className="thought-editor-toolbar">
+            <div className="thought-toolbar-left">
+              <button
+                type="button"
+                className="thought-tool-chip accent-chip"
+                onClick={() => handleInsertTemplate("cognition-action")}
+                title="一键插入【认知与做法】极简结构"
+              >
+                <Lightbulb size={13} />
+                <span>+ 认知与做法</span>
+              </button>
+              <button
+                type="button"
+                className="thought-tool-chip"
+                onClick={() => handleInsertTemplate("bold")}
+                title="插入加粗"
+              >
+                <Bold size={13} />
+                <span>加粗</span>
+              </button>
+              <button
+                type="button"
+                className="thought-tool-chip"
+                onClick={() => handleInsertTemplate("list")}
+                title="插入列表项"
+              >
+                <List size={13} />
+                <span>列表</span>
+              </button>
+              <button
+                type="button"
+                className="thought-tool-chip"
+                onClick={() => handleInsertTemplate("quote")}
+                title="插入金句引用"
+              >
+                <Quote size={13} />
+                <span>金句</span>
+              </button>
+            </div>
+            <div className="thought-toolbar-right">
+              <button
+                type="button"
+                className={`thought-mode-tab ${!isPreviewMode ? "active" : ""}`}
+                onClick={() => setIsPreviewMode(false)}
+              >
+                <PenLine size={12} />
+                <span>编辑</span>
+              </button>
+              <button
+                type="button"
+                className={`thought-mode-tab ${isPreviewMode ? "active" : ""}`}
+                onClick={() => setIsPreviewMode(true)}
+              >
+                <Eye size={12} />
+                <span>预览</span>
+              </button>
+            </div>
+          </div>
+
+          {isPreviewMode ? (
+            <div
+              className="thought-preview-box thought-markdown-body"
+              dangerouslySetInnerHTML={{
+                __html: renderMarkdown(
+                  newThought.trim() || "*（输入内容后在此实时预览 Markdown 排版效果）*"
+                ),
+              }}
+            />
+          ) : (
+            <textarea
+              placeholder="记下此时此刻的思考、认知与做法、好句子（支持 Markdown 排版）..."
+              value={newThought}
+              onChange={e => setNewThought(e.target.value)}
+              rows={5}
+              required
+              autoFocus
+            />
+          )}
+
           <div className="form-actions">
             <input
               type="text"
@@ -211,10 +338,36 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
 
       <div className="thoughts-timeline">
         {thoughts.length === 0 ? (
-          <div className="empty-thoughts-box" style={{ padding: "3.5rem 1.5rem", textAlign: "center", background: "var(--bg-card)", borderRadius: "var(--radius-lg)", border: "1px dashed var(--border-medium)" }}>
-            <Sparkles size={28} style={{ color: "var(--accent-primary)", marginBottom: "0.75rem", opacity: 0.8 }} />
-            <h3 style={{ fontSize: "1.2rem", marginBottom: "0.45rem" }}>暂无速记碎片</h3>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", maxWidth: "38ch", margin: "0 auto 1.5rem", lineHeight: 1.6 }}>
+          <div
+            className="empty-thoughts-box"
+            style={{
+              padding: "3.5rem 1.5rem",
+              textAlign: "center",
+              background: "var(--bg-card)",
+              borderRadius: "var(--radius-lg)",
+              border: "1px dashed var(--border-medium)",
+            }}
+          >
+            <Sparkles
+              size={28}
+              style={{
+                color: "var(--accent-primary)",
+                marginBottom: "0.75rem",
+                opacity: 0.8,
+              }}
+            />
+            <h3 style={{ fontSize: "1.2rem", marginBottom: "0.45rem" }}>
+              暂无速记碎片
+            </h3>
+            <p
+              style={{
+                color: "var(--text-secondary)",
+                fontSize: "0.95rem",
+                maxWidth: "38ch",
+                margin: "0 auto 1.5rem",
+                lineHeight: 1.6,
+              }}
+            >
               生活里的顿悟与灵感转瞬即逝。点击上方“记下一则灵感”，捕捉你的第一条思考记录。
             </p>
             <button className="submit-thought-btn" onClick={handleToggleInput}>
@@ -223,11 +376,17 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
           </div>
         ) : (
           thoughts.map((item, index) => (
-            <article key={item.id} className="thought-card animate-fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
+            <article
+              key={item.id}
+              className="thought-card animate-fade-in"
+              style={{ animationDelay: `${index * 0.05}s` }}
+            >
               <div className="thought-header">
                 <span className="thought-meta">
                   <Clock size={12} />
-                  <span>{item.date} {item.time}</span>
+                  <span>
+                    {item.date} {item.time}
+                  </span>
                 </span>
                 {item.location && (
                   <span className="thought-location">
@@ -239,15 +398,86 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
 
               {editingId === item.id ? (
                 /* Inline Edit Mode */
-                <form className="inline-edit-thought-form animate-fade-in" onSubmit={handleSaveEdit}>
-                  <textarea
-                    value={editContent}
-                    onChange={e => setEditContent(e.target.value)}
-                    rows={4}
-                    className="challenge-textarea"
-                    required
-                    autoFocus
-                  />
+                <form
+                  className="inline-edit-thought-form animate-fade-in"
+                  onSubmit={handleSaveEdit}
+                >
+                  <div className="thought-editor-toolbar inline-toolbar">
+                    <div className="thought-toolbar-left">
+                      <button
+                        type="button"
+                        className="thought-tool-chip accent-chip"
+                        onClick={() => handleInsertEditTemplate("cognition-action")}
+                        title="一键插入【认知与做法】"
+                      >
+                        <Lightbulb size={12} />
+                        <span>+ 认知与做法</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="thought-tool-chip"
+                        onClick={() => handleInsertEditTemplate("bold")}
+                      >
+                        <Bold size={12} />
+                        <span>加粗</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="thought-tool-chip"
+                        onClick={() => handleInsertEditTemplate("list")}
+                      >
+                        <List size={12} />
+                        <span>列表</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="thought-tool-chip"
+                        onClick={() => handleInsertEditTemplate("quote")}
+                      >
+                        <Quote size={12} />
+                        <span>金句</span>
+                      </button>
+                    </div>
+                    <div className="thought-toolbar-right">
+                      <button
+                        type="button"
+                        className={`thought-mode-tab ${!isEditPreviewMode ? "active" : ""}`}
+                        onClick={() => setIsEditPreviewMode(false)}
+                      >
+                        <PenLine size={11} />
+                        <span>编辑</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`thought-mode-tab ${isEditPreviewMode ? "active" : ""}`}
+                        onClick={() => setIsEditPreviewMode(true)}
+                      >
+                        <Eye size={11} />
+                        <span>预览</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {isEditPreviewMode ? (
+                    <div
+                      className="thought-preview-box thought-markdown-body"
+                      dangerouslySetInnerHTML={{
+                        __html: renderMarkdown(
+                          editContent.trim() || "*（暂无内容）*"
+                        ),
+                      }}
+                    />
+                  ) : (
+                    <textarea
+                      value={editContent}
+                      onChange={e => setEditContent(e.target.value)}
+                      rows={5}
+                      className="challenge-textarea"
+                      required
+                      autoFocus
+                    />
+                  )}
+
                   <div className="inline-edit-actions">
                     <input
                       type="text"
@@ -257,7 +487,11 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
                       className="location-input small-loc-input"
                     />
                     <div className="btn-group-right">
-                      <button type="button" className="btn-cancel-edit" onClick={handleCancelEdit}>
+                      <button
+                        type="button"
+                        className="btn-cancel-edit"
+                        onClick={handleCancelEdit}
+                      >
                         <X size={13} />
                         <span>取消</span>
                       </button>
@@ -271,7 +505,12 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
               ) : (
                 /* Display Mode */
                 <>
-                  <p className="thought-content" style={{ whiteSpace: "pre-line" }}>{item.content}</p>
+                  <div
+                    className="thought-content thought-markdown-body"
+                    dangerouslySetInnerHTML={{
+                      __html: renderMarkdown(item.content || ""),
+                    }}
+                  />
 
                   <div className="thought-footer">
                     <button
@@ -279,8 +518,13 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
                       onClick={() => handleToggleLike(item.id)}
                       aria-label="点赞速记"
                     >
-                      <Heart size={13} fill={(likes[item.id] || 0) > 0 ? "currentColor" : "none"} />
-                      <span>{(likes[item.id] || 0) > 0 ? likes[item.id] : "心动"}</span>
+                      <Heart
+                        size={13}
+                        fill={(likes[item.id] || 0) > 0 ? "currentColor" : "none"}
+                      />
+                      <span>
+                        {(likes[item.id] || 0) > 0 ? likes[item.id] : "心动"}
+                      </span>
                     </button>
 
                     <div className="thought-manage-actions">
