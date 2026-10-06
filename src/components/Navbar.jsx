@@ -13,8 +13,6 @@ import {
   BookMarked,
   User,
   Sparkles,
-  ShieldCheck,
-  Eye
 } from 'lucide-react';
 
 export default function Navbar({
@@ -27,7 +25,7 @@ export default function Navbar({
   onTogglePrefs,
   isZenMode,
   isAuthor,
-  onToggleAuthorMode,
+  _onToggleAuthorMode,
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -54,7 +52,6 @@ export default function Navbar({
     { id: 'posts', label: '随笔', icon: <BookOpen size={16} /> },
     { id: 'thoughts', label: '速记', icon: <Sparkles size={16} /> },
     { id: 'reference', label: '参考', icon: <BookMarked size={16} /> },
-    { id: 'about', label: '关于', icon: <User size={16} /> },
   ];
 
   if (isZenMode) {
@@ -111,44 +108,27 @@ export default function Navbar({
             <span className="search-shortcut">⌘K</span>
           </button>
 
-          {/* Author Mode Controls */}
-          {isAuthor ? (
-            <>
-              <button
-                className="action-icon-btn author-status-badge"
-                onClick={onToggleAuthorMode}
-                title="当前为【站长·瓦斯模式】，点击可切换为读者视角"
-                aria-label="切换视角"
-              >
-                <ShieldCheck size={16} className="author-shield-icon" />
-                <span className="author-badge-label">站长</span>
-              </button>
-              <button
-                className="action-icon-btn write-btn"
-                onClick={onOpenNewPost}
-                title="撰写与导出新 Markdown 文章"
-                aria-label="写新文章"
-              >
-                <PenTool size={16} />
-                <span className="btn-label-desktop">写文章</span>
-              </button>
-            </>
-          ) : (
+          {/* About Section Trigger */}
+          <button
+            className={`action-icon-btn about-trigger ${activeTab === 'about' ? 'active' : ''}`}
+            onClick={() => setActiveTab('about')}
+            title="关于作者与自留地"
+            aria-label="关于"
+          >
+            <User size={16} />
+            <span className="btn-label-desktop">关于</span>
+          </button>
+
+          {/* Write Post (visible in author mode) */}
+          {isAuthor && (
             <button
-              className="action-icon-btn reader-preview-badge"
-              onClick={() => {
-                const pass = prompt('请输入站长通行密钥：');
-                if (pass === 'gas' || pass === 'curry') {
-                  onToggleAuthorMode();
-                } else if (pass !== null) {
-                  alert('密钥不正确');
-                }
-              }}
-              title="当前为【读者视角 (只读)】，站长点击可输入密钥解锁"
-              aria-label="读者只读模式"
+              className="action-icon-btn write-btn"
+              onClick={onOpenNewPost}
+              title="撰写与导出新 Markdown 文章"
+              aria-label="写新文章"
             >
-              <Eye size={15} />
-              <span className="reader-badge-label">读者视角</span>
+              <PenTool size={16} />
+              <span className="btn-label-desktop">写文章</span>
             </button>
           )}
 
@@ -200,6 +180,16 @@ export default function Navbar({
                 <span>{item.label}</span>
               </button>
             ))}
+            <button
+              className={`mobile-nav-link ${activeTab === 'about' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('about');
+                setMobileMenuOpen(false);
+              }}
+            >
+              <User size={16} />
+              <span>关于</span>
+            </button>
             <div className="mobile-drawer-divider" />
             {isAuthor && (
               <button
