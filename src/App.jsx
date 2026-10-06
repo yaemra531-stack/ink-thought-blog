@@ -4,10 +4,8 @@ import Footer from './components/Footer';
 import PostCard from './components/PostCard';
 import ArticleDetail from './components/ArticleDetail';
 import ThoughtsStream from './components/ThoughtsStream';
-import ArchiveView from './components/ArchiveView';
 import AboutSection from './components/AboutSection';
 import ReferenceSection from './components/ReferenceSection';
-import ChallengeSection from './components/ChallengeSection';
 import SearchModal from './components/SearchModal';
 import NewPostModal from './components/NewPostModal';
 import ReadingPreferences from './components/ReadingPreferences';
@@ -20,7 +18,15 @@ import './App.css';
 export default function App() {
   const [posts, setPosts] = useState(() => getLocalPosts());
   const [selectedPost, setSelectedPost] = useState(null);
-  const [activeTab, setActiveTab] = useState('posts'); // 'posts' | 'thoughts' | 'archive' | 'about'
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const paramTab = new URLSearchParams(window.location.search).get("tab");
+      if (paramTab && ["posts", "thoughts", "reference", "about"].includes(paramTab)) {
+        return paramTab;
+      }
+    } catch {}
+    return "posts";
+  }); // 'posts' | 'thoughts' | 'reference' | 'about'
   const [selectedTag, setSelectedTag] = useState(null);
   const [isAuthor, setIsAuthor] = useState(() => {
     try {
@@ -275,20 +281,6 @@ export default function App() {
 
             {activeTab === 'thoughts' && (
               <ThoughtsStream
-                isAuthor={isAuthor}
-                onToggleAuthorMode={handleToggleAuthorMode}
-              />
-            )}
-
-            {activeTab === 'archive' && (
-              <ArchiveView
-                posts={posts}
-                onSelectPost={handleSelectPost}
-              />
-            )}
-
-            {activeTab === 'challenge' && (
-              <ChallengeSection
                 isAuthor={isAuthor}
                 onToggleAuthorMode={handleToggleAuthorMode}
               />

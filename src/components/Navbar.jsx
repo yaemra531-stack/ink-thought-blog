@@ -11,10 +11,8 @@ import {
   X,
   BookOpen,
   BookMarked,
-  Archive,
   User,
   Sparkles,
-  Flame,
   ShieldCheck,
   Eye
 } from 'lucide-react';
@@ -53,11 +51,9 @@ export default function Navbar({
   };
 
   const navItems = [
-    { id: 'posts', label: '文集', icon: <BookOpen size={16} /> },
-    { id: 'reference', label: '参考', icon: <BookMarked size={16} /> },
+    { id: 'posts', label: '随笔', icon: <BookOpen size={16} /> },
     { id: 'thoughts', label: '速记', icon: <Sparkles size={16} /> },
-    { id: 'archive', label: '归档', icon: <Archive size={16} /> },
-    { id: 'challenge', label: '21天挑战', icon: <Flame size={16} /> },
+    { id: 'reference', label: '参考', icon: <BookMarked size={16} /> },
     { id: 'about', label: '关于', icon: <User size={16} /> },
   ];
 
