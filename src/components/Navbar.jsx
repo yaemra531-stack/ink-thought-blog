@@ -49,9 +49,9 @@ export default function Navbar({
   };
 
   const navItems = [
-    { id: 'posts', label: '随笔', icon: <BookOpen size={16} /> },
-    { id: 'thoughts', label: '速记', icon: <Sparkles size={16} /> },
-    { id: 'reference', label: '参考', icon: <BookMarked size={16} /> },
+    { id: 'posts', label: '随笔', icon: <BookOpen size={18} /> },
+    { id: 'thoughts', label: '速记', icon: <Sparkles size={18} /> },
+    { id: 'reference', label: '参考', icon: <BookMarked size={18} /> },
   ];
 
   if (isZenMode) {
