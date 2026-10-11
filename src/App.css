@@ -3525,15 +3525,23 @@
 .thought-action-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
   background: transparent;
-  border: 1px solid var(--border-medium);
+  border: none;
   border-radius: var(--radius-sm);
-  padding: 0.25rem 0.5rem;
+  padding: 0;
   font-size: 0.75rem;
   color: var(--text-muted);
+  opacity: 0.55;
   cursor: pointer;
   transition: all var(--transition-fast);
+}
+.thought-action-btn:hover {
+  opacity: 1;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 .thought-action-btn:hover {
   background: var(--bg-secondary);
@@ -3756,4 +3764,37 @@
   background: var(--bg-secondary);
   color: var(--text-primary);
   border-color: var(--border-strong);
+}
+
+/* Quiet Minimalist Like Heart Toggle */
+.like-quiet-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: all var(--transition-fast);
+  padding: 0;
+}
+
+.like-quiet-btn:hover {
+  opacity: 1;
+  color: #E11D48;
+  background: rgba(225, 29, 72, 0.08);
+  transform: scale(1.1);
+}
+
+.like-quiet-btn.liked {
+  opacity: 1;
+  color: #E11D48;
+}
+
+.like-quiet-btn.liked:hover {
+  background: rgba(225, 29, 72, 0.12);
 }

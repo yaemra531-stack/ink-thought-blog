@@ -195,18 +195,22 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
   };
 
   const handleToggleLike = id => {
-    const updated = { ...likes, [id]: (likes[id] || 0) + 1 };
+    const isLiked = Boolean(likes[id]);
+    const updated = { ...likes };
+    if (isLiked) {
+      delete updated[id];
+    } else {
+      updated[id] = 1;
+    }
     setLikes(updated);
     localStorage.setItem("ink_thought_likes", JSON.stringify(updated));
-    cloudSync.incrementLike(id);
   };
 
   return (
     <section className="thoughts-container">
       <div className="section-intro">
         <div className="section-title-wrap">
-          <span className="section-pretitle">B-SIDES & VIGNETTES</span>
-          <h1 className="section-title">灵感速记与碎片</h1>
+          <h1 className="section-title">灵感速记</h1>
         </div>
         <p className="section-desc">
           无需长篇大论。闪念的电光火石、偶遇的字句、认知与做法的顿悟，皆是生活的微型诗。全景双栏实时预览，随时记录、编辑与云端实时保存。
@@ -470,35 +474,33 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
 
               <div className="thought-footer">
                 <button
-                  className={`like-chip-btn ${(likes[item.id] || 0) > 0 ? "liked" : ""}`}
+                  className={`like-quiet-btn ${Boolean(likes[item.id]) ? "liked" : ""}`}
                   onClick={() => handleToggleLike(item.id)}
-                  aria-label="点赞速记"
+                  title={Boolean(likes[item.id]) ? "取消心动" : "心动"}
+                  aria-label="心动"
                 >
                   <Heart
-                    size={13}
-                    fill={(likes[item.id] || 0) > 0 ? "currentColor" : "none"}
+                    size={14}
+                    fill={Boolean(likes[item.id]) ? "currentColor" : "none"}
                   />
-                  <span>
-                    {(likes[item.id] || 0) > 0 ? likes[item.id] : "心动"}
-                  </span>
                 </button>
 
                 <div className="thought-manage-actions">
                   <button
                     className="thought-action-btn edit-btn"
                     onClick={() => handleOpenEditModal(item)}
-                    title="在工作台全景编辑修改此条速记"
+                    title="编辑此条速记"
+                    aria-label="编辑"
                   >
                     <PenLine size={13} />
-                    <span>编辑</span>
                   </button>
                   <button
                     className="thought-action-btn delete-btn"
                     onClick={() => handleDeleteThought(item.id)}
                     title="删除此条速记"
+                    aria-label="删除"
                   >
                     <Trash2 size={13} />
-                    <span>删除</span>
                   </button>
                 </div>
               </div>

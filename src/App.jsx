@@ -217,18 +217,14 @@ export default function App() {
               <section className="posts-container animate-fade-in">
                 {/* Hero Editorial Header */}
                 <div className="hero-banner">
-                  <div className="hero-subtitle-badge">
-                    <Sparkles size={13} />
-                    <span>INDIE BLOG & DIGITAL GARDEN</span>
-                  </div>
+                  
                   <h1 className="hero-title">在留白深处，见思想微澜</h1>
                   <p className="hero-desc">
                     这是一个以文字、思考与手艺为核心的沉静自留地。记录技术架构、设计美学与数字生活实践。
                   </p>
                 </div>
 
-                {/* Top Featured Writing Reference Card (Tim Urban & Paul Graham) */}
-                <WritingReferenceCard />
+
 
                 {/* Filter & Tag Row */}
                 <div className="posts-feed-header">

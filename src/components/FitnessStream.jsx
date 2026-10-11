@@ -196,7 +196,13 @@ export default function FitnessStream({ isAuthor, onToggleAuthorMode }) {
   };
 
   const handleToggleLike = id => {
-    const updated = { ...likes, [id]: (likes[id] || 0) + 1 };
+    const isLiked = Boolean(likes[id]);
+    const updated = { ...likes };
+    if (isLiked) {
+      delete updated[id];
+    } else {
+      updated[id] = 1;
+    }
     setLikes(updated);
     localStorage.setItem("ink_fitness_likes", JSON.stringify(updated));
   };
@@ -205,7 +211,6 @@ export default function FitnessStream({ isAuthor, onToggleAuthorMode }) {
     <section className="thoughts-container">
       <div className="section-intro">
         <div className="section-title-wrap">
-          <span className="section-pretitle">MOVEMENT & OBSERVATIONS</span>
           <h1 className="section-title">运动 · 观察与下一步</h1>
         </div>
         <p className="section-desc">
@@ -484,35 +489,33 @@ export default function FitnessStream({ isAuthor, onToggleAuthorMode }) {
 
               <div className="thought-footer">
                 <button
-                  className={`like-chip-btn ${(likes[item.id] || 0) > 0 ? "liked" : ""}`}
+                  className={`like-quiet-btn ${Boolean(likes[item.id]) ? "liked" : ""}`}
                   onClick={() => handleToggleLike(item.id)}
-                  aria-label="点赞记录"
+                  title={Boolean(likes[item.id]) ? "取消心动" : "心动"}
+                  aria-label="心动"
                 >
                   <Heart
-                    size={13}
-                    fill={(likes[item.id] || 0) > 0 ? "currentColor" : "none"}
+                    size={14}
+                    fill={Boolean(likes[item.id]) ? "currentColor" : "none"}
                   />
-                  <span>
-                    {(likes[item.id] || 0) > 0 ? likes[item.id] : "心动"}
-                  </span>
                 </button>
 
                 <div className="thought-manage-actions">
                   <button
                     className="thought-action-btn edit-btn"
                     onClick={() => handleOpenEditModal(item)}
-                    title="在工作台全景编辑修改此条记录"
+                    title="编辑此条记录"
+                    aria-label="编辑"
                   >
                     <PenLine size={13} />
-                    <span>编辑</span>
                   </button>
                   <button
                     className="thought-action-btn delete-btn"
                     onClick={() => handleDeleteNote(item.id)}
                     title="删除此条记录"
+                    aria-label="删除"
                   >
                     <Trash2 size={13} />
-                    <span>删除</span>
                   </button>
                 </div>
               </div>
