@@ -83,30 +83,23 @@ export default function ReadingPreferences({
             </div>
           </div>
 
-          {/* Theme choice */}
+          {/* Theme choice: 仅保留白天与夜晚 */}
           <div className="pref-section">
-            <label className="pref-label">纸张与界面色调</label>
-            <div className="pref-btn-group-3">
+            <label className="pref-label">界面色调</label>
+            <div className="pref-btn-group">
               <button
                 className={`pref-theme-card theme-light ${theme === 'light' ? 'active' : ''}`}
                 onClick={() => setTheme('light')}
               >
                 <div className="theme-color-preview light" />
-                <span>纸白</span>
-              </button>
-              <button
-                className={`pref-theme-card theme-sepia ${theme === 'sepia' ? 'active' : ''}`}
-                onClick={() => setTheme('sepia')}
-              >
-                <div className="theme-color-preview sepia" />
-                <span>暖羊皮</span>
+                <span>白天</span>
               </button>
               <button
                 className={`pref-theme-card theme-dark ${theme === 'dark' ? 'active' : ''}`}
                 onClick={() => setTheme('dark')}
               >
                 <div className="theme-color-preview dark" />
-                <span>暗曜石</span>
+                <span>夜晚</span>
               </button>
             </div>
           </div>

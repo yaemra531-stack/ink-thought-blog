@@ -5,7 +5,6 @@ import {
   PenTool,
   Moon,
   Sun,
-  Coffee,
   Sliders,
   Menu,
   X,
@@ -30,23 +29,17 @@ export default function Navbar({
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Cycle through light -> dark -> sepia -> light
+  // Toggle between light (白天) and dark (夜晚)
   const toggleTheme = () => {
-    if (theme === 'light') setTheme('dark');
-    else if (theme === 'dark') setTheme('sepia');
-    else setTheme('light');
+    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
   const themeIcon = () => {
-    if (theme === 'dark') return <Sun size={17} />;
-    if (theme === 'sepia') return <Coffee size={17} />;
-    return <Moon size={17} />;
+    return theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />;
   };
 
   const themeTitle = () => {
-    if (theme === 'dark') return '切换到羊皮纸模式';
-    if (theme === 'sepia') return '切换到日间纸质模式';
-    return '切换到暗夜模式';
+    return theme === 'dark' ? '切换到白天模式' : '切换到夜晚模式';
   };
 
   const navItems = [
