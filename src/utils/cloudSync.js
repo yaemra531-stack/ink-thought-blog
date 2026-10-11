@@ -1,5 +1,6 @@
 import { initialChallengeLogs } from '../content/challengeData';
 import initialThoughts from '../content/thoughts.json';
+import initialFitness from '../content/fitness.json';
 
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
@@ -302,6 +303,148 @@ export const cloudSync = {
         });
       } catch (err) {
         console.error('Failed to delete thought on cloud:', err);
+      }
+    }
+    return updated;
+  },
+
+
+  // ================= 运动观察与速记 (Movement / Fitness Notes) =================
+  async getFitnessNotes() {
+    let local = [...initialFitness];
+    try {
+      const saved = localStorage.getItem('ink_user_fitness');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          local = parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Failed reading local fitness notes:', e);
+    }
+
+    if (!API_BASE) return local;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/fitness`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.fitness)) {
+          const map = new Map();
+          local.forEach(t => {
+            if (t && t.id) map.set(t.id, t);
+          });
+
+          const remoteIdSet = new Set();
+          data.fitness.forEach(r => {
+            if (r && r.id) {
+              remoteIdSet.add(r.id);
+              map.set(r.id, r);
+            }
+          });
+
+          const isAuthor = localStorage.getItem('ink_author_mode') === 'true';
+          if (isAuthor) {
+            local.forEach(t => {
+              if (t && t.id && !remoteIdSet.has(t.id)) {
+                this.saveFitnessNote(t).catch(console.error);
+              }
+            });
+          }
+
+          const merged = Array.from(map.values()).sort((a, b) => {
+            const dtA = `${a.date || ''} ${a.time || ''}`;
+            const dtB = `${b.date || ''} ${b.time || ''}`;
+            return dtB.localeCompare(dtA);
+          });
+
+          localStorage.setItem('ink_user_fitness', JSON.stringify(merged));
+          return merged;
+        }
+      }
+    } catch (err) {
+      console.warn('Cloud sync: unable to fetch fitness notes, fallback to local', err);
+    }
+    return local;
+  },
+
+  async saveFitnessNote(note) {
+    let existing = [];
+    try {
+      existing = JSON.parse(localStorage.getItem('ink_user_fitness') || '[]');
+    } catch {
+      existing = [...initialFitness];
+    }
+    const updated = [note, ...existing.filter(t => t.id !== note.id)];
+    localStorage.setItem('ink_user_fitness', JSON.stringify(updated));
+
+    if (API_BASE) {
+      try {
+        await fetch(`${API_BASE}/api/fitness`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeader(),
+          },
+          body: JSON.stringify(note),
+        });
+      } catch (err) {
+        console.error('Failed to sync fitness note to cloud:', err);
+      }
+    }
+    return updated;
+  },
+
+  async updateFitnessNote(id, updates) {
+    let existing = [];
+    try {
+      existing = JSON.parse(localStorage.getItem('ink_user_fitness') || '[]');
+    } catch {
+      existing = [...initialFitness];
+    }
+    const updated = existing.map(t => (t.id === id ? { ...t, ...updates } : t));
+    localStorage.setItem('ink_user_fitness', JSON.stringify(updated));
+
+    if (API_BASE) {
+      try {
+        await fetch(`${API_BASE}/api/fitness/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeader(),
+          },
+          body: JSON.stringify(updates),
+        });
+      } catch (err) {
+        console.error('Failed to sync fitness note update to cloud:', err);
+      }
+    }
+    return updated;
+  },
+
+  async deleteFitnessNote(id) {
+    let existing = [];
+    try {
+      existing = JSON.parse(localStorage.getItem('ink_user_fitness') || '[]');
+    } catch {
+      existing = [...initialFitness];
+    }
+    const updated = existing.filter(t => t.id !== id);
+    localStorage.setItem('ink_user_fitness', JSON.stringify(updated));
+
+    if (API_BASE) {
+      try {
+        await fetch(`${API_BASE}/api/fitness/${id}`, {
+          method: 'DELETE',
+          headers: {
+            ...getAuthHeader(),
+          },
+        });
+      } catch (err) {
+        console.error('Failed to delete fitness note on cloud:', err);
       }
     }
     return updated;

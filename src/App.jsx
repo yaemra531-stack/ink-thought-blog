@@ -4,6 +4,7 @@ import Footer from './components/Footer';
 import PostCard from './components/PostCard';
 import ArticleDetail from './components/ArticleDetail';
 import ThoughtsStream from './components/ThoughtsStream';
+import FitnessStream from './components/FitnessStream';
 import AboutSection from './components/AboutSection';
 import ReferenceSection from './components/ReferenceSection';
 import SearchModal from './components/SearchModal';
@@ -21,7 +22,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(() => {
     try {
       const paramTab = new URLSearchParams(window.location.search).get("tab");
-      if (paramTab && ["posts", "thoughts", "reference", "about"].includes(paramTab)) {
+      if (paramTab && ["posts", "thoughts", "fitness", "reference", "about"].includes(paramTab)) {
         return paramTab;
       }
     } catch {}
@@ -281,6 +282,13 @@ export default function App() {
 
             {activeTab === 'thoughts' && (
               <ThoughtsStream
+                isAuthor={isAuthor}
+                onToggleAuthorMode={handleToggleAuthorMode}
+              />
+            )}
+
+            {activeTab === 'fitness' && (
+              <FitnessStream
                 isAuthor={isAuthor}
                 onToggleAuthorMode={handleToggleAuthorMode}
               />
