@@ -3766,20 +3766,27 @@
   border-color: var(--border-strong);
 }
 
-/* Quiet Minimalist Like Heart Toggle */
+/* Quiet Minimalist Like Heart Accumulator */
 .like-quiet-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
+  gap: 4px;
+  min-width: 28px;
   height: 28px;
   border-radius: var(--radius-full);
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  opacity: 0.6;
+  opacity: 0.65;
   transition: all var(--transition-fast);
+  user-select: none;
+  font-family: var(--font-sans);
+}
+
+.like-quiet-btn:not(.liked) {
+  width: 28px;
   padding: 0;
 }
 
@@ -3787,14 +3794,32 @@
   opacity: 1;
   color: #E11D48;
   background: rgba(225, 29, 72, 0.08);
-  transform: scale(1.1);
+  border-color: rgba(225, 29, 72, 0.16);
+  transform: translateY(-1px);
+}
+
+.like-quiet-btn:active {
+  transform: scale(0.92);
 }
 
 .like-quiet-btn.liked {
   opacity: 1;
   color: #E11D48;
+  background: rgba(225, 29, 72, 0.06);
+  border-color: rgba(225, 29, 72, 0.14);
+  padding: 0 8px 0 6px;
 }
 
 .like-quiet-btn.liked:hover {
   background: rgba(225, 29, 72, 0.12);
+  border-color: rgba(225, 29, 72, 0.28);
+}
+
+.like-count-num {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }

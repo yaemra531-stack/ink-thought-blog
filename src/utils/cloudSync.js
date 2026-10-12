@@ -477,26 +477,31 @@ export const cloudSync = {
     return local;
   },
 
-  async incrementLike(targetId) {
+  async recordLike(targetId) {
+    if (!API_BASE) return;
+    try {
+      await fetch(`${API_BASE}/api/likes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetId }),
+      });
+    } catch (err) {
+      console.warn('Failed to sync like to cloud:', err);
+    }
+  },
+
+  async incrementLike(targetId, storageKey = 'ink_thought_likes') {
     let likes = {};
     try {
-      likes = JSON.parse(localStorage.getItem('ink_thought_likes') || '{}');
+      likes = JSON.parse(localStorage.getItem(storageKey) || '{}');
     } catch {}
-    const newCount = (likes[targetId] || 0) + 1;
+    const rawVal = likes[targetId];
+    const curVal = typeof rawVal === 'number' ? rawVal : (rawVal ? 1 : 0);
+    const newCount = curVal + 1;
     likes[targetId] = newCount;
-    localStorage.setItem('ink_thought_likes', JSON.stringify(likes));
+    localStorage.setItem(storageKey, JSON.stringify(likes));
 
-    if (API_BASE) {
-      try {
-        await fetch(`${API_BASE}/api/likes`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ targetId }),
-        });
-      } catch (err) {
-        console.warn('Failed to sync like to cloud:', err);
-      }
-    }
+    await this.recordLike(targetId);
     return likes;
   },
 };

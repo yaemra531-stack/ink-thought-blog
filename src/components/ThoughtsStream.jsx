@@ -42,6 +42,21 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
         setThoughts(remoteThoughts);
       }
     });
+    cloudSync.getLikes().then(remoteLikes => {
+      if (remoteLikes && typeof remoteLikes === "object") {
+        setLikes(prev => {
+          const merged = { ...prev };
+          Object.entries(remoteLikes).forEach(([id, count]) => {
+            const remoteNum = typeof count === "number" ? count : (count ? 1 : 0);
+            const localNum = typeof merged[id] === "number" ? merged[id] : (merged[id] ? 1 : 0);
+            if (remoteNum > localNum) {
+              merged[id] = remoteNum;
+            }
+          });
+          return merged;
+        });
+      }
+    });
   }, []);
 
   // Modal Workspace States
@@ -194,16 +209,18 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
     }
   };
 
-  const handleToggleLike = id => {
-    const isLiked = Boolean(likes[id]);
-    const updated = { ...likes };
-    if (isLiked) {
-      delete updated[id];
-    } else {
-      updated[id] = 1;
-    }
+  const getLikeCount = id => {
+    const val = likes[id];
+    return typeof val === "number" ? val : (val ? 1 : 0);
+  };
+
+  const handleIncrementLike = id => {
+    const currentCount = getLikeCount(id);
+    const nextCount = currentCount + 1;
+    const updated = { ...likes, [id]: nextCount };
     setLikes(updated);
     localStorage.setItem("ink_thought_likes", JSON.stringify(updated));
+    cloudSync.recordLike(id);
   };
 
   return (
@@ -474,15 +491,24 @@ export default function ThoughtsStream({ isAuthor, onToggleAuthorMode }) {
 
               <div className="thought-footer">
                 <button
-                  className={`like-quiet-btn ${Boolean(likes[item.id]) ? "liked" : ""}`}
-                  onClick={() => handleToggleLike(item.id)}
-                  title={Boolean(likes[item.id]) ? "取消心动" : "心动"}
-                  aria-label="心动"
+                  className={`like-quiet-btn ${getLikeCount(item.id) > 0 ? "liked" : ""}`}
+                  onClick={() => handleIncrementLike(item.id)}
+                  title={
+                    getLikeCount(item.id) > 0
+                      ? `常用精华 · 已使用 ${getLikeCount(item.id)} 次（点击 +1）`
+                      : "记录使用 / 心动（点击 +1）"
+                  }
+                  aria-label={`已使用 ${getLikeCount(item.id)} 次`}
                 >
                   <Heart
                     size={14}
-                    fill={Boolean(likes[item.id]) ? "currentColor" : "none"}
+                    fill={getLikeCount(item.id) > 0 ? "currentColor" : "none"}
                   />
+                  {getLikeCount(item.id) > 0 && (
+                    <span className="like-count-num">
+                      {getLikeCount(item.id)}
+                    </span>
+                  )}
                 </button>
 
                 <div className="thought-manage-actions">
