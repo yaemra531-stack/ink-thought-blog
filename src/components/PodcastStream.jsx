@@ -15,8 +15,7 @@ import {
   Columns,
   AlignLeft,
   User,
-  Headphones,
-  Trash2
+  Headphones
 } from 'lucide-react';
 import alanInterview from '../content/alanInterview.json';
 import wealthFreedomRaw from '../content/wealthFreedomCurated.json';
@@ -167,7 +166,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   });
 
   // 正在编辑的切片笔记暂存
-  const [activeNoteSliceKey, setActiveNoteSliceKey] = useState(null);
+  const [editingNoteSliceKey, setEditingNoteSliceKey] = useState(null);
   const [noteDraftText, setNoteDraftText] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
 
@@ -284,13 +283,13 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       originalQuote: (seg.quote || []).join('\n\n'),
       timeBadge: isAlan
         ? `🎙️ 孙宇晨 · ${seg.time_start || '0:00'} - ${seg.time_end || ''} 原声`
-        : `🎙️ 孙宇晨 · ${seg.time || ''} 原话`,
+        : `🎙️ 孙宇晨 · ${seg.time || ''} 原声`,
       sliceKey: isAlan
         ? `alan-t${activeTopic.id}-s${idx + 1}`
         : `wf-t${activeTopic.id}-s${idx + 1}`,
       sourceHint: isAlan
         ? `出自《孙宇晨 × 邵艾伦｜年轻人如何抓住AI时代的机会？》专题 0${activeTopic.id} · ${activeTopic.title}`
-        : `出自《财富自由革命之路》第 ${activeTopic.episodeNo} 期 · ${activeTopic.originalTitle}`,
+        : `出自《孙宇晨·财富自由革命之路》第 ${activeTopic.episodeNo} 期 · ${activeTopic.originalTitle}`,
       topicCore: activeTopic.core,
       note: seg.note || '',
     }));
@@ -362,24 +361,36 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       localStorage.setItem('ink_podcast_slice_notes', JSON.stringify(updated));
     } catch {}
 
-    setActiveNoteSliceKey(null);
+    setEditingNoteSliceKey(null);
     setNoteDraftText('');
   };
 
-  // 删除切片随笔笔记
-  const handleDeleteSliceNote = sliceKey => {
-    const updated = { ...sliceNotes };
-    delete updated[sliceKey];
-    setSliceNotes(updated);
-    try {
-      localStorage.setItem('ink_podcast_slice_notes', JSON.stringify(updated));
-    } catch {}
-  };
-
   // 复制骨架卡片为引用文本
-  const handleCopySkeleton = (slice) => {
-    const content = `【${slice.title}】\n核心命题：${slice.topicCore}\n\n推演骨架：\n${slice.skeletonList.map(s => `• ${s}`).join('\n')}\n\n记忆钩子：${slice.hook || '把握根本，安稳入眠。'}\n（${slice.sourceHint}）`;
-    navigator.clipboard.writeText(content).then(() => {
+  const handleCopySliceCard = slice => {
+    const noteObj = sliceNotes[slice.sliceKey];
+    const sourceTitle = activeSeries === 'alan-2026'
+      ? `【2026 访谈 · 专题 0${activeTopic.id}】${activeTopic.title}`
+      : `【财富自由之路 · 第 ${activeTopic.episodeNo} 期】${activeTopic.title}`;
+
+    let md = `### ${sourceTitle} ${slice.tag}\n\n`;
+    md += `> ${slice.originalQuote}\n\n`;
+    md += `**【核心论点剖析】**\n${slice.title}\n\n`;
+    if (slice.skeletonList && slice.skeletonList.length > 0) {
+      md += `**【先抓骨架】**\n`;
+      slice.skeletonList.forEach(s => {
+        md += `- ${s}\n`;
+      });
+      md += `\n`;
+    }
+    if (slice.hook) {
+      md += `**【精辟金句】** ${slice.hook}\n\n`;
+    }
+    if (noteObj?.text) {
+      md += `**【我的随笔思考】**\n${noteObj.text}\n\n`;
+    }
+    md += `—— 来自《博客随笔 · 夜读对照》`;
+
+    navigator.clipboard.writeText(md).then(() => {
       setCopiedKey(slice.sliceKey);
       setTimeout(() => setCopiedKey(null), 2000);
     });
@@ -778,224 +789,231 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       {/* 专题介绍 Hero 卡片 */}
       <section className="contrast-topic-hero animate-fade-in">
         <div className="contrast-topic-hero-header">
-          <span className="contrast-topic-badge">
+          <span className="contrast-topic-hero-badge">
             {activeSeries === 'alan-2026'
-              ? `深度长访谈 · 专题 0${activeTopic.id}`
-              : `财富自由精读 · 第 ${activeTopic.episodeNo} 期 · ${activeTopic.unit}`}
+              ? `专题 0${activeTopic.id} ｜ 原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end}`
+              : `第 ${activeTopic.episodeNo} 期 · ${activeTopic.unit}`}
           </span>
-          <span className="contrast-topic-time">
-            {activeSeries === 'alan-2026'
-              ? `约 ${activeTopic.time_start} - ${activeTopic.time_end}`
-              : `收录 ${(activeTopic.segments || []).length} 个核心切片`}
-          </span>
+          <span className="contrast-topic-hero-speaker">🎙️ 孙宇晨 × 邵艾伦</span>
         </div>
-        <h2 className="contrast-topic-title">{activeTopic.title}</h2>
-        <p className="contrast-topic-core">
-          <strong>一句话核心命题：</strong>
-          {activeTopic.core}
-        </p>
+        <h2 className="contrast-topic-hero-title">{activeTopic.title}</h2>
+        <div className="contrast-topic-hero-core">
+          <span className="contrast-topic-core-label">一句话命题：</span>
+          <span className="contrast-topic-core-text">{activeTopic.core}</span>
+        </div>
       </section>
+
+      {/* 认知降温初衷提示 */}
+      <div className="contrast-mindset-banner animate-fade-in">
+        <Moon size={14} className="text-amber-400 flex-shrink-0" />
+        <span className="contrast-mindset-text">
+          深夜睡不着时，看未知的新东西会激发多巴胺导致兴奋；听过、熟悉、不带压迫感的内容是最好的“思维滑梯”——平复心率与脑电波，自然产生睡意。
+        </span>
+      </div>
 
       {/* 切片快速单选过滤胶囊 */}
       {currentSlices.length > 1 && (
-        <div className="contrast-slice-filter-bar">
+        <div className="contrast-pills-row">
           <button
             type="button"
-            className={`contrast-slice-filter-pill ${activeSliceIdx === 0 ? 'active' : ''}`}
+            className={`contrast-pill-item ${activeSliceIdx === 0 ? 'active' : ''}`}
             onClick={() => setActiveSliceIdx(0)}
           >
-            全部切片流 ({currentSlices.length})
+            全部切片 ({currentSlices.length})
           </button>
-          {currentSlices.map((slice, idx) => (
+          {currentSlices.map(slice => (
             <button
               key={slice.id}
               type="button"
-              className={`contrast-slice-filter-pill ${activeSliceIdx === idx + 1 ? 'active' : ''}`}
-              onClick={() => setActiveSliceIdx(idx + 1)}
+              className={`contrast-pill-item ${activeSliceIdx === slice.id ? 'active' : ''}`}
+              onClick={() => setActiveSliceIdx(slice.id)}
             >
-              切片 0{idx + 1}
+              切片 0{slice.id}
             </button>
           ))}
         </div>
       )}
 
-      {/* 主阅读视区 */}
+      {/* 主展示区：左侧相关原文 + 右侧核心论点剖析与随笔笔记 */}
       {viewMode === 'contrast' ? (
         /* 双栏对照精读模式 */
-        <main className={`contrast-split-container font-size-${fontSize}`}>
+        <main className={`contrast-main-container font-size-${fontSize}`}>
           {currentSlices.length === 0 ? (
             <div className="contrast-loading-box"><p>该专题暂无切片内容</p></div>
           ) : (
             currentSlices.map((slice, sIdx) => {
               if (activeSliceIdx !== 0 && activeSliceIdx !== sIdx + 1) return null;
-              const noteData = sliceNotes[slice.sliceKey];
+              const noteObj = sliceNotes[slice.sliceKey];
+              const isEditingThis = editingNoteSliceKey === slice.sliceKey;
+              const isCopied = copiedKey === slice.sliceKey;
 
               return (
-                <div key={slice.sliceKey} className="contrast-split-row animate-fade-in">
-                  {/* ====== 【左栏：相关原话与出处】 ====== */}
+                <div key={slice.sliceKey} className="contrast-dual-pair animate-fade-in">
+                  {/* ====== 【左栏】：对照相关原文（先读原文输入） ====== */}
                   <section className="contrast-pane contrast-pane-left">
                     <div className="contrast-slice-tag-row">
-                      <span className="contrast-left-header-label">{slice.timeBadge}</span>
+                      <span className="contrast-left-header-label">
+                        {activeSeries === 'alan-2026'
+                          ? '对照相关原声 · 🎙️ 孙宇晨（对话邵艾伦）'
+                          : `对照相关原声 · 🎙️ 孙宇晨（第 ${activeTopic.episodeNo} 期）`}
+                      </span>
                     </div>
 
+                    {/* 引子提示 */}
+                    {slice.lead && (
+                      <div className="contrast-quote-lead">
+                        <span>💬 {slice.lead.replace(/^引子：\s*/, '')}</span>
+                      </div>
+                    )}
+
+                    {/* 原文长引用段落 */}
                     <div className="contrast-original-quote-body">
-                      {slice.lead && (
-                        <p className="contrast-lead-p">
-                          <em>{slice.lead}</em>
-                        </p>
-                      )}
-                      {slice.originalQuoteList.map((q, qIdx) => (
-                        <p key={qIdx} className="contrast-quote-p">
-                          {q}
+                      {slice.originalQuoteList.map((para, pIdx) => (
+                        <p key={pIdx} className="contrast-quote-p">
+                          {para}
                         </p>
                       ))}
-                      {slice.note && (
-                        <p className="contrast-note-p">
-                          <small>注：{slice.note}</small>
-                        </p>
-                      )}
                     </div>
 
+                    {/* 原文片段定位卡片 */}
                     <div className="contrast-source-card">
                       <div className="contrast-source-meta">
                         <span className="contrast-source-badge">
-                          {activeSeries === 'alan-2026' ? '访谈出处' : '讲稿出处'}
+                          {slice.timeBadge}
                         </span>
-                        <span className="contrast-source-ep-title">
-                          {slice.sourceHint}
-                        </span>
+                        <button
+                          type="button"
+                          className="contrast-btn-goto-full"
+                          onClick={() => setViewMode('full')}
+                          title="切换到全篇通读看完整上下文"
+                        >
+                          到原文看这一段 →
+                        </button>
                       </div>
+                      <p className="contrast-source-hint">
+                        {slice.sourceHint}
+                      </p>
                     </div>
                   </section>
 
-                  {/* 中间自适应虚线分隔装饰 */}
-                  <div className="contrast-pane-divider" aria-hidden="true" />
-
-                  {/* ====== 【右栏：思维骨架与深度笔记】 ====== */}
+                  {/* ====== 【右栏】：核心论点剖析 + 骨架拆解 + 随笔笔记 ====== */}
                   <section className="contrast-pane contrast-pane-right">
+                    {/* 切片标识 */}
                     <div className="contrast-slice-tag-row">
                       <span className="contrast-slice-q-tag">{slice.tag}</span>
                     </div>
 
-                    {/* 命题 */}
-                    <h3 className="contrast-assertion-title">
-                      {slice.title}
-                    </h3>
+                    {/* 大号核心命题 */}
+                    <h2 className="contrast-main-assertion">{slice.title}</h2>
+                    {slice.lead && (
+                      <p className="contrast-sub-assertion">引子：{slice.lead.replace(/^引子：\s*/, '')}</p>
+                    )}
 
-                    {/* 思维骨架推演 */}
-                    <div className="contrast-bone-box">
-                      <span className="contrast-bone-label">{slice.bone}</span>
-                      <ul className="contrast-skeleton-list">
-                        {slice.skeletonList.map((boneItem, bIdx) => (
-                          <li key={bIdx} className="contrast-skeleton-item">
-                            <span className="contrast-skeleton-bullet">›</span>
-                            <span>{boneItem}</span>
-                          </li>
-                        ))}
-                      </ul>
+                    {/* 先抓骨架胶囊 */}
+                    <div className="contrast-bone-capsule">
+                      <span>{slice.bone}</span>
                     </div>
 
-                    {/* 记忆钩子 / 金句卡片 */}
+                    {/* 逐块拆解 / 骨架推演链条 */}
+                    <div className="contrast-breakdown-box">
+                      <div className="contrast-breakdown-title">
+                        <span>▶ 逻辑推演链条与认知骨架</span>
+                      </div>
+                      {slice.skeletonList && slice.skeletonList.length > 0 ? (
+                        <div className="contrast-skeleton-steplist">
+                          {slice.skeletonList.map((step, sIdx) => (
+                            <div key={sIdx} className="contrast-skeleton-step-item">
+                              <span className="contrast-skeleton-step-num">{sIdx + 1}</span>
+                              <span className="contrast-skeleton-step-text">{step}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {/* 金句提炼 Hook */}
                     {slice.hook && (
-                      <div className="contrast-hook-card">
-                        <p className="contrast-hook-text">
-                          <strong>认知重点 · </strong>
-                          {slice.hook}
-                        </p>
+                      <div className="contrast-hook-quote">
+                        <Sparkles size={13} className="text-amber-400 flex-shrink-0" />
+                        <span>{slice.hook}</span>
                       </div>
                     )}
 
-                    {/* 随笔笔记与卡片动作 */}
-                    <div className="contrast-notes-section">
-                      <div className="contrast-notes-header">
-                        <div className="contrast-notes-title-row">
+                    {/* 深度思考与随笔记录卡片（右侧核心笔记区） */}
+                    <div className="contrast-reflection-card">
+                      <div className="contrast-ref-header">
+                        <span className="contrast-ref-title">
                           <PenLine size={13} className="text-amber-400" />
-                          <span className="contrast-notes-label">深度思考与随笔记录</span>
-                        </div>
-                        <div className="contrast-notes-actions">
+                          <span>深度思考与随笔记录</span>
+                        </span>
+                        <div className="contrast-ref-actions">
                           <button
                             type="button"
-                            className="contrast-action-text-btn"
+                            className="contrast-ref-btn"
                             onClick={() => {
-                              setActiveNoteSliceKey(slice.sliceKey);
-                              setNoteDraftText(noteData ? noteData.text : '');
+                              if (isEditingThis) {
+                                setEditingNoteSliceKey(null);
+                              } else {
+                                setEditingNoteSliceKey(slice.sliceKey);
+                                setNoteDraftText(noteObj?.text || '');
+                              }
                             }}
                           >
                             <PenLine size={12} />
-                            <span>{noteData ? '修改笔记' : '记一笔'}</span>
+                            <span>{noteObj?.text ? '修改笔记' : '记一笔'}</span>
                           </button>
                           <button
                             type="button"
-                            className="contrast-action-text-btn"
-                            onClick={() => handleCopySkeleton(slice)}
-                            title="复制骨架推演为卡片引用"
+                            className="contrast-ref-btn"
+                            onClick={() => handleCopySliceCard(slice)}
+                            title="复制本组对照卡片为 Markdown"
                           >
-                            {copiedKey === slice.sliceKey ? (
-                              <>
-                                <Check size={12} className="text-emerald-400" />
-                                <span className="text-emerald-400">已复制</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy size={12} />
-                                <span>复制卡片</span>
-                              </>
-                            )}
+                            {isCopied ? <Check size={12} className="text-amber-400" /> : <Copy size={12} />}
+                            <span>{isCopied ? '已复制' : '复制卡片'}</span>
                           </button>
                         </div>
                       </div>
 
-                      {/* 编辑草稿输入框 */}
-                      {activeNoteSliceKey === slice.sliceKey && (
-                        <div className="contrast-note-editor animate-scale-up">
+                      {/* 编辑态输入框 */}
+                      {isEditingThis ? (
+                        <div className="contrast-note-editor-wrap">
                           <textarea
                             className="contrast-note-textarea"
-                            placeholder="写下你针对这个论点的顿悟、联想或行动方案..."
-                            rows={3}
+                            rows="3"
+                            placeholder="写下你对左侧原话的思考、共鸣或实践迁移..."
                             value={noteDraftText}
                             onChange={e => setNoteDraftText(e.target.value)}
                             autoFocus
                           />
-                          <div className="contrast-editor-btns">
+                          <div className="contrast-note-editor-btns">
                             <button
                               type="button"
-                              className="contrast-btn-secondary"
-                              onClick={() => {
-                                setActiveNoteSliceKey(null);
-                                setNoteDraftText('');
-                              }}
-                            >
-                              取消
-                            </button>
-                            <button
-                              type="button"
-                              className="contrast-btn-primary"
+                              className="contrast-note-btn save"
                               onClick={() => handleSaveSliceNote(slice.sliceKey)}
                             >
                               <Send size={12} />
-                              <span>保存此段沉淀</span>
+                              <span>保存随笔</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="contrast-note-btn cancel"
+                              onClick={() => setEditingNoteSliceKey(null)}
+                            >
+                              取消
                             </button>
                           </div>
                         </div>
-                      )}
-
-                      {/* 已保存的笔记卡片 */}
-                      {noteData && (
-                        <div className="contrast-saved-note-card animate-fade-in">
-                          <p className="contrast-saved-note-text">{noteData.text}</p>
-                          <div className="contrast-saved-note-footer">
-                            <span className="contrast-note-time">
-                              记录于 {noteData.updatedAt}
-                            </span>
-                            <button
-                              type="button"
-                              className="contrast-btn-delete-note"
-                              onClick={() => handleDeleteSliceNote(slice.sliceKey)}
-                              title="删除此条笔记"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
+                      ) : noteObj?.text ? (
+                        <div className="contrast-user-note-body">
+                          <p className="contrast-user-note-p">{noteObj.text}</p>
+                          <span className="contrast-user-note-time">记录于 {noteObj.updatedAt}</span>
+                        </div>
+                      ) : (
+                        <div className="contrast-note-default-tip">
+                          <p className="contrast-vocabulary-hint">
+                            <strong>认知重点 · </strong>
+                            {slice.hook || '把精力集中在根本战略上，不要用战术忙碌掩盖懒惰；在熟悉语境中平复焦虑，安稳入眠。'}
+                          </p>
                         </div>
                       )}
                     </div>
