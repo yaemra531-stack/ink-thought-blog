@@ -4678,3 +4678,576 @@
   font-family: var(--font-mono);
   font-size: 0.78rem;
 }
+
+/* ==========================================================================
+   阅读批注与灵感笔记系统 (Marginalia & Reflection Cards)
+   ========================================================================== */
+
+/* 工作台三栏响应式网格 */
+.podcast-workspace.has-notes-panel {
+  grid-template-columns: 270px minmax(0, 1fr) 350px;
+  gap: 1.25rem;
+}
+
+.podcast-workspace.focus-reading.has-notes-panel {
+  grid-template-columns: minmax(0, 1fr) 360px;
+  max-width: 1300px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  .podcast-workspace.has-notes-panel {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+  .podcast-workspace.has-notes-panel .podcast-sidebar {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .podcast-workspace.has-notes-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 划词浮动摘录按钮 */
+.podcast-floating-annotate-btn {
+  animation: floatPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+@keyframes floatPopIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.podcast-float-btn-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.9rem;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.podcast-float-btn-inner:hover {
+  background: var(--accent-primary);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(154, 52, 18, 0.35);
+}
+
+/* 目录卡片中的笔记数量角标 */
+.podcast-notes-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+  background: rgba(217, 119, 6, 0.15);
+  color: #D97706;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+
+[data-theme='dark'] .podcast-notes-badge {
+  background: rgba(245, 158, 11, 0.2);
+  color: #FBBF24;
+}
+
+/* 顶部状态栏的高亮统计胶囊 */
+.podcast-chip-accent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  background: rgba(217, 119, 6, 0.12);
+  color: #B45309;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.podcast-chip-accent:hover {
+  background: rgba(217, 119, 6, 0.22);
+}
+
+[data-theme='dark'] .podcast-chip-accent {
+  background: rgba(245, 158, 11, 0.18);
+  color: #FCD34D;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* 顶部控制栏批注按钮 */
+.podcast-action-btn.notes-toggle-btn {
+  background: rgba(217, 119, 6, 0.08);
+  color: #B45309;
+  border-color: rgba(217, 119, 6, 0.2);
+}
+
+.podcast-action-btn.notes-toggle-btn.active {
+  background: #B45309;
+  color: #FFF;
+  border-color: #B45309;
+}
+
+[data-theme='dark'] .podcast-action-btn.notes-toggle-btn {
+  background: rgba(245, 158, 11, 0.12);
+  color: #FBBF24;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+[data-theme='dark'] .podcast-action-btn.notes-toggle-btn.active {
+  background: #D97706;
+  color: #1C1917;
+  font-weight: 700;
+}
+
+/* 右侧边栏主容器 */
+.podcast-annotations-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 120px);
+  position: sticky;
+  top: 85px;
+  box-shadow: var(--shadow-sm);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* 侧栏顶端标题与操作 */
+.podcast-annotations-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.podcast-ann-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.podcast-ann-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: var(--text-primary);
+}
+
+.podcast-ann-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.podcast-ann-header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.podcast-ann-header-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.podcast-ann-header-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.podcast-ann-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  transition: all var(--transition-fast);
+}
+
+.podcast-ann-close-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Tab 切换栏 */
+.podcast-ann-tabs {
+  display: flex;
+  background: var(--bg-secondary);
+  padding: 0.2rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.85rem;
+  gap: 0.2rem;
+}
+
+.podcast-ann-tab {
+  flex: 1;
+  text-align: center;
+  border: none;
+  background: transparent;
+  padding: 0.35rem 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.podcast-ann-tab.active {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 新批注编辑器卡片 */
+.podcast-composer-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.podcast-composer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.podcast-composer-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.podcast-clear-quote-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+  border-radius: var(--radius-sm);
+}
+
+.podcast-clear-quote-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-primary);
+}
+
+/* 引用原文预览块 */
+.podcast-quote-preview-box {
+  display: flex;
+  gap: 0.45rem;
+  background: var(--bg-input);
+  border-left: 3px solid #D97706;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.podcast-quote-symbol {
+  color: #D97706;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.podcast-quote-preview-text {
+  font-family: var(--font-serif);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin: 0;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.podcast-quote-guide-tip {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px dashed var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.65rem;
+  margin-bottom: 0.65rem;
+}
+
+/* 想法输入多行文本框 */
+.podcast-thought-input-wrap {
+  margin-bottom: 0.65rem;
+}
+
+.podcast-thought-textarea {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  outline: none;
+  resize: vertical;
+  min-height: 70px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.podcast-thought-textarea:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+/* 编辑器底部工具条 */
+.podcast-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.podcast-sync-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.podcast-sync-checkbox input {
+  cursor: pointer;
+  accent-color: var(--accent-primary);
+}
+
+.podcast-btn-save-ann {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--accent-primary);
+  color: #FFF;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.podcast-btn-save-ann:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.podcast-btn-save-ann:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.podcast-ann-saved-toast {
+  margin-top: 0.65rem;
+  padding: 0.4rem 0.6rem;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #059669;
+  border-radius: var(--radius-sm);
+  font-size: 0.74rem;
+  text-align: center;
+  font-weight: 600;
+  animation: fadeIn 0.2s ease;
+}
+
+[data-theme='dark'] .podcast-ann-saved-toast {
+  color: #34D399;
+}
+
+/* 已沉淀批注卡片列表 */
+.podcast-annotations-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.podcast-ann-empty {
+  text-align: center;
+  padding: 2.2rem 1rem;
+  border: 1px dashed var(--border-medium);
+  border-radius: var(--radius-sm);
+}
+
+.podcast-ann-empty-icon {
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-bottom: 0.6rem;
+}
+
+.podcast-ann-empty-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 0.35rem 0;
+}
+
+.podcast-ann-empty-sub {
+  font-size: 0.76rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* 单条笔记卡片 */
+.podcast-note-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all var(--transition-fast);
+}
+
+.podcast-note-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.podcast-note-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.72rem;
+}
+
+.podcast-note-ep-tag {
+  color: var(--accent-primary);
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podcast-note-ep-tag:hover {
+  text-decoration: underline;
+}
+
+.podcast-note-time {
+  color: var(--text-muted);
+}
+
+/* 卡片内的引用 */
+.podcast-card-quote {
+  position: relative;
+  background: var(--bg-secondary);
+  border-left: 3px solid #D97706;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 0.5rem 0.65rem;
+  margin-bottom: 0.55rem;
+}
+
+.podcast-card-quote-text {
+  font-family: var(--font-serif);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* 卡片内的个人想法 */
+.podcast-card-thought {
+  margin-bottom: 0.55rem;
+}
+
+.podcast-card-thought-text {
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+  font-weight: 500;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* 卡片操作栏 */
+.podcast-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  border-top: 1px solid var(--border-light);
+  padding-top: 0.45rem;
+}
+
+.podcast-card-act-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.podcast-card-act-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.podcast-card-act-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
+}
