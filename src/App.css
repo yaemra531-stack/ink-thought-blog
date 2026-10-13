@@ -6706,3 +6706,274 @@
   font-weight: 500;
   margin-top: 0.35rem;
 }
+
+/* ==========================================================================
+   级联精炼工作台与系列实时进度指示器 (Cascading Breadcrumb Bar & Progress Chip)
+   ========================================================================== */
+.contrast-topbar-container {
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.16);
+  padding-bottom: 0.85rem;
+}
+
+.contrast-cascade-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.contrast-cascade-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.contrast-crumb-sep {
+  color: var(--text-muted);
+  opacity: 0.35;
+  font-size: 0.82rem;
+  user-select: none;
+}
+
+/* 级联人选按钮 */
+.contrast-crumb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(var(--accent-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  color: var(--accent-primary);
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.contrast-crumb-btn:hover,
+.contrast-crumb-btn.active {
+  background: rgba(var(--accent-rgb), 0.2);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+/* 人物下拉菜单列表 */
+.contrast-figure-menu {
+  width: 320px !important;
+}
+
+.contrast-figure-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem;
+}
+
+.contrast-figure-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.contrast-figure-item:hover:not(.disabled) {
+  background: rgba(var(--accent-rgb), 0.1);
+  border-color: rgba(var(--accent-rgb), 0.25);
+}
+
+.contrast-figure-item.active {
+  background: rgba(var(--accent-rgb), 0.16);
+  border-color: var(--accent-primary);
+}
+
+.contrast-figure-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.contrast-figure-avatar {
+  font-size: 1.15rem;
+  line-height: 1;
+  padding-top: 2px;
+}
+
+.contrast-figure-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+}
+
+.contrast-figure-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.contrast-figure-name {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.contrast-figure-status-tag {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+}
+
+.contrast-figure-status-tag.active {
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.contrast-figure-desc {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* 系列精简胶囊切换组 */
+.contrast-series-capsule-group {
+  display: inline-flex;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(var(--accent-rgb), 0.18);
+  padding: 0.15rem;
+  border-radius: 6px;
+}
+
+.contrast-series-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0.28rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.contrast-series-chip:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.contrast-series-chip.active {
+  background: rgba(var(--accent-rgb), 0.18);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.contrast-chip-count {
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+  padding: 0.05rem 0.3rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+/* 右侧控制区与进度胶囊 */
+.contrast-cascade-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* 实时阅读进度指示胶囊 */
+.contrast-progress-chip {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2rem;
+  background: rgba(var(--accent-rgb), 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.22);
+  border-radius: 6px;
+  padding: 0.25rem 0.65rem;
+  min-width: 96px;
+  cursor: default;
+  transition: all var(--transition-fast);
+}
+
+.contrast-progress-chip:hover {
+  border-color: rgba(var(--accent-rgb), 0.4);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.contrast-progress-chip.all-done {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #10B981;
+}
+
+.contrast-progress-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.contrast-progress-text {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.contrast-progress-chip.all-done .contrast-progress-text {
+  color: #10B981;
+}
+
+.contrast-progress-pct {
+  color: var(--accent-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.contrast-progress-chip.all-done .contrast-progress-pct {
+  color: #10B981;
+}
+
+.contrast-progress-bar-track {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.contrast-progress-bar-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 9999px;
+  transition: width 0.35s ease;
+}
+
+.contrast-progress-chip.all-done .contrast-progress-bar-fill {
+  background: #10B981;
+}
+
+.contrast-nav-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}

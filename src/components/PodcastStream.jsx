@@ -39,11 +39,42 @@ const FONT_SIZE_LABELS = {
 
 // 预留的人物智库体系配置（以人为基础展开阅读）
 const AVAILABLE_FIGURES = [
-  { id: 'justin-sun', name: '孙宇晨', series: '2026 对话邵艾伦 / 财富自由 154 篇', count: '154篇 + 7专题', active: true },
-  { id: 'alex-wang', name: 'Alex Wang', series: 'Meta AI / Scale 创业与技术', count: '即将上架', active: false },
-  { id: 'dario-amodei', name: 'Dario Amodei', series: 'Anthropic / 尺度法则与AI前沿', count: '即将上架', active: false },
-  { id: 'sam-altman', name: 'Sam Altman', series: 'OpenAI / 创业哲学与AGI', count: '即将上架', active: false },
-  { id: 'paul-graham', name: 'Paul Graham', series: 'YC 创业与黑客精神精读', count: '即将上架', active: false },
+  {
+    id: 'justin-sun',
+    name: '孙宇晨',
+    avatar: '👤',
+    title: '波场 TRON 创始人',
+    desc: '2026 艾伦访谈 7 专题 + 财富自由之路 154 篇全集',
+    countBadge: '161 篇收录',
+    active: true,
+  },
+  {
+    id: 'elon-musk',
+    name: 'Elon Musk',
+    avatar: '🚀',
+    title: '特斯拉 / SpaceX 首席执行官',
+    desc: '第一性原理、极限工程与深度传记访谈精读',
+    countBadge: '筹备中',
+    active: false,
+  },
+  {
+    id: 'alex-wang',
+    name: 'Alex Wang',
+    avatar: '⚡',
+    title: 'Scale AI 创始人兼 CEO',
+    desc: '数据基础设施演进、AI 生态与青年创业实录',
+    countBadge: '筹备中',
+    active: false,
+  },
+  {
+    id: 'sam-altman',
+    name: 'Sam Altman',
+    avatar: '🧠',
+    title: 'OpenAI 首席执行官',
+    desc: 'AGI 演进路线、创业哲学与尺度定律思考',
+    countBadge: '筹备中',
+    active: false,
+  },
 ];
 
 export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
@@ -81,6 +112,11 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
 
   // 当前激活的切片索引（0 代表查看全部切片对照流，1 代表只看切片1...）
   const [activeSliceIdx, setActiveSliceIdx] = useState(0);
+
+  // 精读人物与人物下拉浮层
+  const [activeFigureId, setActiveFigureId] = useState('justin-sun');
+  const [isFigureMenuOpen, setIsFigureMenuOpen] = useState(false);
+  const figureDropdownRef = useRef(null);
 
   // 章节/专题下拉选择浮层（采用按钮正下方的无模糊轻巧 Popover，绝不遮盖全屏）
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
@@ -137,14 +173,15 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsCatalogOpen(false);
       }
+      if (figureDropdownRef.current && !figureDropdownRef.current.contains(event.target)) {
+        setIsFigureMenuOpen(false);
+      }
     }
-    if (isCatalogOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isCatalogOpen]);
+  }, []);
 
   // 切换系列
   const handleSwitchSeries = seriesKey => {
@@ -545,6 +582,26 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   const prevClassicEpisode = currentClassicIndex > 0 ? podcastsIndex[currentClassicIndex - 1] : null;
   const nextClassicEpisode = currentClassicIndex < podcastsIndex.length - 1 ? podcastsIndex[currentClassicIndex + 1] : null;
 
+  // 艾伦访谈进度统计
+  const alanStats = useMemo(() => {
+    const total = alanInterview.topics.length;
+    const completed = alanInterview.topics.filter(t => readEpisodeIds.includes(`alan-${t.id}`)).length;
+    const percent = Math.round((completed / total) * 100);
+    return { completed, total, percent, isAllDone: completed === total && total > 0 };
+  }, [readEpisodeIds]);
+
+  // 154 篇经典逐字稿进度统计
+  const classicStats = useMemo(() => {
+    const total = podcastsIndex.length;
+    const completed = podcastsIndex.filter(p => readEpisodeIds.includes(p.id)).length;
+    const percent = Math.round((completed / total) * 100);
+    return { completed, total, percent, isAllDone: completed === total && total > 0 };
+  }, [readEpisodeIds]);
+
+  // 当前激活系列的进度统计
+  const currentStats = activeSeries === 'alan-2026' ? alanStats : classicStats;
+  const currentUnit = activeSeries === 'alan-2026' ? '专题' : '篇';
+
   // 2026 专题上一篇/下一篇
   const prevTopic = activeTopicId > 1 ? alanInterview.topics[activeTopicId - 2] : null;
   const nextTopic = activeTopicId < alanInterview.topics.length ? alanInterview.topics[activeTopicId] : null;
@@ -553,55 +610,95 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     <div className="podcast-contrast-theme animate-fade-in" ref={contentRef}>
       {/* 顶部做题对照式导航容器 */}
       <header className="contrast-topbar-container">
-        {/* 人物心智精读主轴徽章 */}
-        <div className="contrast-figure-badge-row">
-          <div className="contrast-figure-pill active" title="当前主读人物：孙宇晨">
-            <User size={12} className="text-amber-400" />
-            <span>精读人物 · 孙宇晨（收录 2026 深度访谈 + 154 篇全集）</span>
-          </div>
-          <div className="contrast-figure-meta-tip">
-            <span>以人物为主轴的高浓度认知阅读：定期精读 1~2 人，平复心率，深度滋养。</span>
-          </div>
-        </div>
+        <div className="contrast-cascade-bar">
+          {/* 左侧：级联路径导航（人物 / 系列 / 章节） */}
+          <div className="contrast-cascade-left">
+            {/* 1. 人物下拉选择器 */}
+            <div className="contrast-dropdown-wrapper" ref={figureDropdownRef}>
+              <button
+                type="button"
+                className={`contrast-crumb-btn figure-picker-btn ${isFigureMenuOpen ? 'active' : ''}`}
+                onClick={() => setIsFigureMenuOpen(!isFigureMenuOpen)}
+                title="切换精读人物智库"
+              >
+                <User size={13} className="text-amber-400" />
+                <span className="contrast-crumb-name">
+                  {AVAILABLE_FIGURES.find(f => f.id === activeFigureId)?.name || '孙宇晨'}
+                </span>
+                <span className="contrast-down-arrow">{isFigureMenuOpen ? '▲' : '▾'}</span>
+              </button>
 
-        {/* 系列切换 Tab：2026 最新长访谈 VS 财富自由 154 篇 */}
-        <div className="contrast-series-tabs">
-          <button
-            type="button"
-            className={`contrast-series-tab ${activeSeries === 'alan-2026' ? 'active' : ''}`}
-            onClick={() => handleSwitchSeries('alan-2026')}
-          >
-            <Sparkles size={13} className="text-amber-400" />
-            <span>【2026 最新长访谈】孙宇晨 × 邵艾伦（7 个精读专题）</span>
-            <span className="contrast-series-badge">最新</span>
-          </button>
-          <button
-            type="button"
-            className={`contrast-series-tab ${activeSeries === 'wealth-freedom-154' ? 'active' : ''}`}
-            onClick={() => handleSwitchSeries('wealth-freedom-154')}
-          >
-            <Headphones size={13} />
-            <span>【经典原声合集】财富自由之路（154 篇逐字稿）</span>
-          </button>
-        </div>
-
-        {/* 标题与描述 */}
-        <div className="contrast-topbar-header">
-          <div className="contrast-topbar-title-wrap">
-            <div className="contrast-topbar-title-row">
-              <Sparkles size={16} className="text-amber-500" />
-              <h1 className="contrast-topbar-h1">做题对照 · 逐字精读</h1>
+              {/* 人物选择浮层 */}
+              {isFigureMenuOpen && (
+                <div className="contrast-dropdown-panel contrast-figure-menu animate-scale-up">
+                  <div className="contrast-dd-header">
+                    <span className="contrast-dd-title">精读人物智库</span>
+                    <button
+                      type="button"
+                      className="contrast-dd-close-btn"
+                      onClick={() => setIsFigureMenuOpen(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="contrast-figure-list">
+                    {AVAILABLE_FIGURES.map(fig => (
+                      <div
+                        key={fig.id}
+                        className={`contrast-figure-item ${fig.id === activeFigureId ? 'active' : ''} ${!fig.active ? 'disabled' : ''}`}
+                        onClick={() => {
+                          if (fig.active) {
+                            setActiveFigureId(fig.id);
+                            setIsFigureMenuOpen(false);
+                          }
+                        }}
+                      >
+                        <span className="contrast-figure-avatar">{fig.avatar}</span>
+                        <div className="contrast-figure-info">
+                          <div className="contrast-figure-name-row">
+                            <span className="contrast-figure-name">{fig.name}</span>
+                            <span className={`contrast-figure-status-tag ${fig.active ? 'active' : ''}`}>
+                              {fig.countBadge}
+                            </span>
+                          </div>
+                          <span className="contrast-figure-desc">{fig.desc}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            <p className="contrast-topbar-sub">
-              {activeSeries === 'alan-2026'
-                ? '原访谈约 4 小时 22 分高浓度整理：左侧读原汁原味原话，右侧看核心命题、骨架推演与笔记沉淀。'
-                : '左侧读原汁原味的音频逐字稿，右侧看思维骨架、论点拆解与笔记沉淀；按需展开深度随笔。'}
-            </p>
-          </div>
 
-          {/* 右侧控制胶囊 */}
-          <div className="contrast-topbar-controls">
-            {/* 切换篇目/专题下拉菜单 */}
+            <span className="contrast-crumb-sep">/</span>
+
+            {/* 2. 系列切换胶囊组（带实时进度提示） */}
+            <div className="contrast-series-capsule-group">
+              <button
+                type="button"
+                className={`contrast-series-chip ${activeSeries === 'alan-2026' ? 'active' : ''}`}
+                onClick={() => handleSwitchSeries('alan-2026')}
+                title={`2026 艾伦访谈 · 已读 ${alanStats.completed}/${alanStats.total} 专题`}
+              >
+                <Sparkles size={12} className="text-amber-400" />
+                <span>艾伦长访谈</span>
+                <span className="contrast-chip-count">{alanStats.completed}/{alanStats.total}</span>
+              </button>
+              <button
+                type="button"
+                className={`contrast-series-chip ${activeSeries === 'wealth-freedom-154' ? 'active' : ''}`}
+                onClick={() => handleSwitchSeries('wealth-freedom-154')}
+                title={`财富自由之路 · 已读 ${classicStats.completed}/${classicStats.total} 篇`}
+              >
+                <Headphones size={12} />
+                <span>财富自由之路</span>
+                <span className="contrast-chip-count">{classicStats.completed}/{classicStats.total}</span>
+              </button>
+            </div>
+
+            <span className="contrast-crumb-sep">/</span>
+
+            {/* 3. 篇目/章节选择器 */}
             <div className="contrast-dropdown-wrapper" ref={dropdownRef}>
               <button
                 type="button"
@@ -609,7 +706,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                 onClick={() => setIsCatalogOpen(!isCatalogOpen)}
                 title={activeSeries === 'alan-2026' ? '浏览与切换 7 个睡前专题' : '浏览与切换 154 篇逐字稿章节'}
               >
-                <BookOpen size={14} className="text-amber-400" />
+                <BookOpen size={13} className="text-amber-400" />
                 <span className="contrast-btn-ep-title">
                   {activeSeries === 'alan-2026'
                     ? `专题 0${activeTopic.id} ${activeTopic.title}`
@@ -623,7 +720,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                 <div className="contrast-dropdown-panel animate-scale-up">
                   <div className="contrast-dd-header">
                     <span className="contrast-dd-title">
-                      {activeSeries === 'alan-2026' ? '选读专题（共 7 个睡前专题）' : '选读章节（收录 154 篇）'}
+                      {activeSeries === 'alan-2026'
+                        ? `选读专题（已过 ${alanStats.completed}/${alanStats.total}）`
+                        : `选读章节（已过 ${classicStats.completed}/${classicStats.total}）`}
                     </span>
                     <button
                       type="button"
@@ -648,22 +747,22 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                     {searchQuery && (
                       <button
                         type="button"
+                        className="contrast-dd-clear-btn"
                         onClick={() => setSearchQuery('')}
-                        className="contrast-dd-clear"
                       >
                         ✕
                       </button>
                     )}
                   </div>
 
-                  {/* 154 篇栏目分类胶囊 */}
+                  {/* 154篇模式下的栏目横向筛选条 */}
                   {activeSeries === 'wealth-freedom-154' && (
-                    <div className="contrast-dd-pills">
-                      {columnsList.slice(0, 8).map(col => (
+                    <div className="contrast-dd-columns-bar">
+                      {columnsList.map(col => (
                         <button
                           key={col}
                           type="button"
-                          className={`contrast-dd-pill ${selectedColumn === col ? 'active' : ''}`}
+                          className={`contrast-dd-col-chip ${selectedColumn === col ? 'active' : ''}`}
                           onClick={() => setSelectedColumn(col)}
                         >
                           {col}
@@ -672,96 +771,107 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                     </div>
                   )}
 
-                  {/* 章节/专题滚动列表 */}
-                  <div className="contrast-dd-scroll-list">
+                  {/* 章节/专题列表流 */}
+                  <div className="contrast-dd-list">
                     {activeSeries === 'alan-2026' ? (
-                      filteredTopics.length === 0 ? (
-                        <div className="contrast-dd-empty">未匹配到相关专题</div>
-                      ) : (
-                        filteredTopics.map(t => {
-                          const isActive = t.id === activeTopicId;
-                          const isRead = readEpisodeIds.includes(`alan-${t.id}`);
-                          return (
-                            <div
-                              key={t.id}
-                              className={`contrast-dd-item ${isActive ? 'active' : ''} ${isRead ? 'is-read' : ''}`}
-                              onClick={() => handleSelectTopic(t.id)}
-                            >
-                              <div className="contrast-dd-item-top">
-                                <span className="contrast-dd-id">专题 0{t.id}</span>
-                                <span className="contrast-dd-col">{t.time_start} – {t.time_end}</span>
-                                {isRead && <span className="contrast-dd-read">✓ 已过</span>}
-                              </div>
-                              <div className="contrast-dd-title-text">{t.title}</div>
-                              <div className="contrast-dd-meta">
-                                <span>{t.core}</span>
-                              </div>
+                      filteredTopics.map(t => {
+                        const isSelected = t.id === activeTopicId;
+                        const isRead = readEpisodeIds.includes(`alan-${t.id}`);
+                        return (
+                          <div
+                            key={t.id}
+                            className={`contrast-dd-item ${isSelected ? 'selected' : ''} ${isRead ? 'is-read' : ''}`}
+                            onClick={() => handleSelectTopic(t.id)}
+                          >
+                            <span className="contrast-dd-item-num">0{t.id}</span>
+                            <div className="contrast-dd-item-info">
+                              <span className="contrast-dd-item-title">{t.title}</span>
+                              <span className="contrast-dd-item-core">{t.core}</span>
                             </div>
-                          );
-                        })
-                      )
+                            {isRead && <span className="contrast-dd-read">✓ 已过</span>}
+                          </div>
+                        );
+                      })
                     ) : (
-                      filteredEpisodes.length === 0 ? (
-                        <div className="contrast-dd-empty">未匹配到相关章节</div>
-                      ) : (
-                        filteredEpisodes.map(item => {
-                          const isActive = item.id === activeEpisodeId;
-                          const isRead = readEpisodeIds.includes(item.id);
-                          return (
-                            <div
-                              key={item.id}
-                              className={`contrast-dd-item ${isActive ? 'active' : ''} ${isRead ? 'is-read' : ''}`}
-                              onClick={() => handleSelectEpisode(item.id)}
-                            >
-                              <div className="contrast-dd-item-top">
-                                <span className="contrast-dd-id">#{item.id}</span>
-                                <span className="contrast-dd-col">{item.column}</span>
-                                {isRead && <span className="contrast-dd-read">✓ 已过</span>}
-                              </div>
-                              <div className="contrast-dd-title-text">{item.title}</div>
-                              <div className="contrast-dd-meta">
-                                <span>{item.wordCount} 字 · 约 {item.readTimeMinutes} 分钟</span>
+                      filteredEpisodes.map(ep => {
+                        const isSelected = ep.id === activeEpisodeId;
+                        const isRead = readEpisodeIds.includes(ep.id);
+                        return (
+                          <div
+                            key={ep.id}
+                            className={`contrast-dd-item ${isSelected ? 'selected' : ''} ${isRead ? 'is-read' : ''}`}
+                            onClick={() => handleSelectEpisode(ep.id)}
+                          >
+                            <span className="contrast-dd-item-num">#{ep.id}</span>
+                            <div className="contrast-dd-item-info">
+                              <span className="contrast-dd-item-title">{ep.title}</span>
+                              <div className="contrast-dd-item-meta">
+                                {ep.column && <span className="contrast-dd-item-tag">{ep.column}</span>}
+                                <span>{ep.readTimeMinutes || 3} 分钟</span>
                               </div>
                             </div>
-                          );
-                        })
-                      )
+                            {isRead && <span className="contrast-dd-read">✓ 已过</span>}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>
               )}
             </div>
+          </div>
 
-            {/* 对照精读 / 全篇通读 切换 */}
+          {/* 右侧：实时系列进度胶囊与操作组 */}
+          <div className="contrast-cascade-right">
+            {/* 实时系列阅读进度胶囊 */}
+            <div
+              className={`contrast-progress-chip ${currentStats.isAllDone ? 'all-done' : ''}`}
+              title={`当前系列进度：已完成 ${currentStats.completed} / ${currentStats.total} ${currentUnit} (${currentStats.percent}%)`}
+            >
+              <div className="contrast-progress-info">
+                <span className="contrast-progress-text">
+                  {currentStats.isAllDone ? '✓ 全篇读毕' : `进度 ${currentStats.completed}/${currentStats.total} ${currentUnit}`}
+                </span>
+                <span className="contrast-progress-pct">{currentStats.percent}%</span>
+              </div>
+              <div className="contrast-progress-bar-track">
+                <div
+                  className="contrast-progress-bar-fill"
+                  style={{ width: `${currentStats.percent}%` }}
+                />
+              </div>
+            </div>
+
+            {/* 模式切换胶囊：对照 vs 通读 */}
             <div className="contrast-mode-switch">
               <button
                 type="button"
                 className={`contrast-mode-btn ${viewMode === 'contrast' ? 'active' : ''}`}
                 onClick={() => setViewMode('contrast')}
-                title="左侧原文 + 右侧拆解对照模式"
+                title="双栏做题对照精读模式"
               >
-                <Columns size={13} />
+                <Columns size={12} />
                 <span>对照</span>
               </button>
               <button
                 type="button"
                 className={`contrast-mode-btn ${viewMode === 'full' ? 'active' : ''}`}
                 onClick={() => setViewMode('full')}
-                title="纯净全篇逐字稿长文通读"
+                title="单栏通读沉浸模式"
               >
-                <AlignLeft size={13} />
+                <AlignLeft size={12} />
                 <span>通读</span>
               </button>
             </div>
 
-            {/* 字号调节 */}
+            {/* 字号切换 */}
             <button
               type="button"
               className="contrast-ctrl-btn font-btn"
               onClick={handleToggleFontSize}
               title={`当前字号: ${FONT_SIZE_LABELS[fontSize]}，点击切换`}
             >
-              <Type size={13} />
+              <Type size={12} />
               <span>{FONT_SIZE_LABELS[fontSize]}</span>
             </button>
 
@@ -772,13 +882,13 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
               onClick={() => toggleMarkRead(activeSeries === 'alan-2026' ? `alan-${activeTopic.id}` : activeEpisode.id)}
               title="标记为今晚已读完"
             >
-              <CheckCircle2 size={14} />
+              <CheckCircle2 size={13} />
               <span>{readEpisodeIds.includes(activeSeries === 'alan-2026' ? `alan-${activeTopic.id}` : activeEpisode.id) ? '已过' : '打卡'}</span>
             </button>
 
             {/* 上一篇/下一篇 */}
             {activeSeries === 'alan-2026' ? (
-              <>
+              <div className="contrast-nav-pair">
                 <button
                   type="button"
                   className="contrast-ctrl-btn nav-btn"
@@ -786,7 +896,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                   onClick={() => prevTopic && handleSelectTopic(prevTopic.id)}
                   title="上一个专题"
                 >
-                  <ChevronLeft size={15} />
+                  <ChevronLeft size={14} />
                 </button>
                 <button
                   type="button"
@@ -795,11 +905,11 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                   onClick={() => nextTopic && handleSelectTopic(nextTopic.id)}
                   title="下一个专题"
                 >
-                  <ChevronRight size={15} />
+                  <ChevronRight size={14} />
                 </button>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="contrast-nav-pair">
                 <button
                   type="button"
                   className="contrast-ctrl-btn nav-btn"
@@ -807,7 +917,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                   onClick={() => prevClassicEpisode && handleSelectEpisode(prevClassicEpisode.id)}
                   title="上一篇"
                 >
-                  <ChevronLeft size={15} />
+                  <ChevronLeft size={14} />
                 </button>
                 <button
                   type="button"
@@ -816,36 +926,12 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                   onClick={() => nextClassicEpisode && handleSelectEpisode(nextClassicEpisode.id)}
                   title="下一篇"
                 >
-                  <ChevronRight size={15} />
+                  <ChevronRight size={14} />
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>
-
-        {/* 切片胶囊切换器：Q1, Q2, Q3... */}
-        {viewMode === 'contrast' && currentSeriesSlices.length > 0 && (
-          <div className="contrast-pills-row">
-            <button
-              type="button"
-              className={`contrast-pill-item ${activeSliceIdx === 0 ? 'active' : ''}`}
-              onClick={() => setActiveSliceIdx(0)}
-            >
-              全部切片 ({currentSeriesSlices.length})
-            </button>
-            {currentSeriesSlices.map(slice => (
-              <button
-                key={slice.id}
-                type="button"
-                className={`contrast-pill-item ${activeSliceIdx === slice.id ? 'active' : ''}`}
-                onClick={() => setActiveSliceIdx(slice.id)}
-                title={slice.title}
-              >
-                Q{slice.id}
-              </button>
-            ))}
-          </div>
-        )}
       </header>
 
       {/* 2026 艾伦访谈专属专题介绍卡片 */}
