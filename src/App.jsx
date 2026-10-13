@@ -78,7 +78,7 @@ export default function App() {
   };
 
   // Reading Preferences State (persisted in localStorage)
-  const [theme, setTheme] = useState(() => { const s = localStorage.getItem('ink_theme'); return s === 'dark' ? 'dark' : 'light'; });
+  const [theme, setTheme] = useState(() => { const s = localStorage.getItem('ink_theme'); return s === 'light' ? 'light' : 'dark'; });
   const [fontPref, setFontPref] = useState(() => localStorage.getItem('ink_font_pref') || 'serif');
   const [fontSize, setFontSize] = useState(() => localStorage.getItem('ink_font_size') || 'medium');
   const [isZenMode, setIsZenMode] = useState(false);

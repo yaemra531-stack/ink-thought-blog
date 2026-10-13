@@ -17,6 +17,7 @@ import {
   User,
   Compass
 } from 'lucide-react';
+import TranscriptAnnotations from './TranscriptAnnotations';
 import podcastsIndex from '../content/podcastsIndex.json';
 import { renderMarkdown } from '../utils/markdownParser';
 
@@ -416,7 +417,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
 
   return (
     <div className="podcast-contrast-theme animate-fade-in" ref={contentRef}>
-      {/* 顶部做题对照式导航容器（暖琥珀夜读风） */}
+      {/* 顶部做题对照式导航容器（低饱和阅读配色） */}
       <header className="contrast-topbar-container">
         {/* 人物心智精读主轴徽章（支持以人为轴展开的深度阅读） */}
         <div className="contrast-figure-badge-row">
@@ -698,7 +699,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                     <h2 className="contrast-main-assertion">{slice.title}</h2>
                     <p className="contrast-sub-assertion">{slice.assertion}</p>
 
-                    {/* 先抓骨架胶囊（暖琥珀金色） */}
+                    {/* 先抓骨架胶囊 */}
                     <div className="contrast-bone-capsule">
                       <span>{slice.bone}</span>
                     </div>
@@ -804,6 +805,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       ) : (
         /* 全篇长文通读模式 */
         <main className={`contrast-full-reader font-size-${fontSize}`}>
+          {isLoadingContent ? <div className="contrast-loading-box"><p>正在翻开逐字稿...</p></div> : (
           <div className="contrast-full-article-wrap">
             <div className="contrast-full-header">
               <span className="contrast-full-ep-id">第 {activeEpisode.id} 篇 · {activeEpisode.column}</span>
@@ -815,11 +817,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
               </div>
             </div>
 
-            <div
-              className="contrast-full-body"
-              dangerouslySetInnerHTML={{ __html: formattedFullHtml }}
-            />
+            <TranscriptAnnotations key={activeEpisode.id} episode={activeEpisode} html={formattedFullHtml} fontSize={fontSize} />
           </div>
+          )}
         </main>
       )}
 
