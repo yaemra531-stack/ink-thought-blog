@@ -13,6 +13,9 @@ import {
   RotateCcw,
   Send,
   SlidersHorizontal,
+  Maximize2,
+  Minimize2,
+  Type,
 } from 'lucide-react';
 import podcastsIndex from '../content/podcastsIndex.json';
 import { renderMarkdown } from '../utils/markdownParser';
@@ -22,6 +25,14 @@ const podcastModules = import.meta.glob('/src/content/podcasts/*.md', {
   query: '?raw',
   import: 'default',
 });
+
+const FONT_SIZES = ['sm', 'base', 'lg', 'xl'];
+const FONT_SIZE_LABELS = {
+  sm: '小',
+  base: '标准',
+  lg: '稍大',
+  xl: '特大',
+};
 
 export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   // 当前选中的篇目 ID（默认从 localStorage 读取上次阅读，没有则默认第 006 篇创刊词）
@@ -35,10 +46,19 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     return '006';
   });
 
-  // 是否处于全屏沉浸阅读态（在移动端或专注模式下隐藏目录）
+  // 是否处于全屏沉浸阅读态（专注模式隐藏侧栏目录）
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [currentEpisodeContent, setCurrentEpisodeContent] = useState('');
   const [isLoadingContent, setIsLoadingContent] = useState(false);
+
+  // 夜读字号档位
+  const [fontSize, setFontSize] = useState(() => {
+    try {
+      return localStorage.getItem('ink_podcast_font_size') || 'base';
+    } catch {
+      return 'base';
+    }
+  });
 
   // 搜索与栏目筛选
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,7 +85,19 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     podcastsIndex.forEach(p => {
       if (p.column && p.column !== '漫谈') set.add(p.column);
     });
-    return ['全部', '创刊词', '战略', '90后不买房', '比特币', '全球流动性过剩', '医疗', '番外', ...Array.from(set).filter(c => !['全部', '创刊词', '战略', '90后不买房', '比特币', '全球流动性过剩', '医疗', '番外'].includes(c))];
+    return [
+      '全部',
+      '创刊词',
+      '战略',
+      '90后不买房',
+      '比特币',
+      '全球流动性过剩',
+      '医疗',
+      '番外',
+      ...Array.from(set).filter(
+        c => !['全部', '创刊词', '战略', '90后不买房', '比特币', '全球流动性过剩', '医疗', '番外'].includes(c)
+      ),
+    ];
   }, []);
 
   // 过滤篇目列表
@@ -139,7 +171,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   }, [activeEpisodeId, activeEpisode]);
 
   // 标记当前篇目为已读/未读切换
-  const toggleMarkRead = (id) => {
+  const toggleMarkRead = id => {
     setReadEpisodeIds(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
       localStorage.setItem('ink_podcast_read_history', JSON.stringify(next));
@@ -147,14 +179,24 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     });
   };
 
+  // 切换字号
+  const handleToggleFontSize = () => {
+    const nextIdx = (FONT_SIZES.indexOf(fontSize) + 1) % FONT_SIZES.length;
+    const nextSize = FONT_SIZES[nextIdx];
+    setFontSize(nextSize);
+    localStorage.setItem('ink_podcast_font_size', nextSize);
+  };
+
   // 切换上一篇/下一篇
   const currentIndex = podcastsIndex.findIndex(p => p.id === activeEpisodeId);
   const prevEpisode = currentIndex > 0 ? podcastsIndex[currentIndex - 1] : null;
   const nextEpisode = currentIndex < podcastsIndex.length - 1 ? podcastsIndex[currentIndex + 1] : null;
 
-  const handleSelectEpisode = (id) => {
+  const handleSelectEpisode = id => {
     setActiveEpisodeId(id);
-    setIsReadingMode(true);
+    if (window.innerWidth < 860) {
+      setIsReadingMode(true);
+    }
   };
 
   // 保存深夜随笔批注到博客「速记」
@@ -175,7 +217,6 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       existing.unshift(newThought);
       localStorage.setItem('ink_user_thoughts', JSON.stringify(existing));
 
-      // 若有云端 API 同步机制则触发
       fetch('https://creator-api-worker.yaemra531.workers.dev/api/thoughts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -190,7 +231,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     }
   };
 
-  // 格式化正文 Markdown：给讲话人（如 **讲话人1**）加上高亮类名，使排版极具播客现场感
+  // 格式化正文 Markdown：优雅渲染独白与对话
   const formattedHtml = useMemo(() => {
     if (!currentEpisodeContent) return '';
     let processed = currentEpisodeContent;
@@ -199,14 +240,16 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     processed = processed.replace(/^#\s+.*?\n+/, '');
     processed = processed.replace(/^>\s+出自.*?合集.*?\n+/, '');
 
-    // 将 **讲话人1**（0:15）转为专门的对话者徽标
+    // 独白篇防呆（清除残余的讲话人标签）
+    processed = processed.replace(/\*\*讲话人1\*\*/g, '');
+
+    // 将 🎙️ **孙宇晨** · 0:15 转换为精致的主讲人标识卡
     processed = processed.replace(
-      /\*\*讲话人1\*\*\s*（(\d+:\d+)）/g,
-      '<div class="speaker-bubble speaker-sun"><span class="speaker-name">孙宇晨</span><span class="speaker-time">$1</span></div>'
-    );
-    processed = processed.replace(
-      /\*\*讲话人2\*\*\s*（(\d+:\d+)）/g,
-      '<div class="speaker-bubble speaker-host"><span class="speaker-name">访谈对话</span><span class="speaker-time">$1</span></div>'
+      /🎙️\s*\*\*孙宇晨\*\*(?:\s*·\s*(\d+:\d+))?/g,
+      (match, time) => {
+        const timeHtml = time ? `<span class="speaker-time">${time}</span>` : '';
+        return `<div class="speaker-bubble speaker-sun"><span class="speaker-name">🎙️ 孙宇晨</span>${timeHtml}</div>`;
+      }
     );
 
     return renderMarkdown(processed);
@@ -239,30 +282,32 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
           <div className="podcast-status-top">
             <div className="podcast-status-stats">
               <span className="podcast-chip-primary">
-                <Headphones size={13} />
-                <span>154 篇全量收录</span>
+                <BookOpen size={13} />
+                <span>已收录 154 篇逐字稿</span>
               </span>
               <span className="podcast-chip-muted">
                 <CheckCircle2 size={13} />
                 <span>已读 {readEpisodeIds.length} / 154</span>
               </span>
             </div>
+            <span className="podcast-status-time">
+              <Clock size={12} />
+              <span>适合入睡前 15–20 分钟</span>
+            </span>
           </div>
 
           <div className="podcast-anchor-box">
-            <div className="podcast-anchor-label">
-              <Clock size={14} />
-              <span>昨晚读到这里：</span>
-            </div>
-            <div className="podcast-anchor-title">
-              <strong>#{activeEpisode.id}</strong> {activeEpisode.fullTitle}
-            </div>
+            <span className="podcast-anchor-label">
+              <Bookmark size={13} />
+              <span>上次读到：第 {activeEpisode?.id || '006'} 篇</span>
+            </span>
+            <span className="podcast-anchor-title">{activeEpisode?.title}</span>
             <button
               type="button"
               className="podcast-btn-resume"
-              onClick={() => setIsReadingMode(true)}
+              onClick={() => setIsReadingMode(!isReadingMode)}
             >
-              <span>沉浸阅读</span>
+              <span>{isReadingMode ? '显示目录' : '沉浸全屏阅读'}</span>
               <ChevronRight size={14} />
             </button>
           </div>
@@ -326,11 +371,14 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                     <div className="podcast-item-header">
                       <span className="podcast-item-id">#{item.id}</span>
                       <span className="podcast-item-col">{item.column}</span>
-                      {isRead && <span className="podcast-read-badge">✓ 已过一遍</span>}
+                      <span className="podcast-item-mode-badge">{item.modeLabel || '独白'}</span>
+                      {isRead && <span className="podcast-read-badge">✓ 已过</span>}
                     </div>
                     <div className="podcast-item-title">{item.title}</div>
                     <div className="podcast-item-meta">
                       <span>{item.wordCount} 字</span>
+                      <span>·</span>
+                      <span>约 {item.readTimeMinutes || 5} 分钟</span>
                     </div>
                   </div>
                 );
@@ -368,6 +416,29 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
             </div>
 
             <div className="podcast-reader-actions">
+              {/* 字号调节 */}
+              <button
+                type="button"
+                className="podcast-action-btn font-btn"
+                onClick={handleToggleFontSize}
+                title={`当前字号: ${FONT_SIZE_LABELS[fontSize]}，点击切换`}
+              >
+                <Type size={14} />
+                <span>{FONT_SIZE_LABELS[fontSize]}</span>
+              </button>
+
+              {/* 沉浸全屏模式切换 */}
+              <button
+                type="button"
+                className={`podcast-action-btn ${isReadingMode ? 'active' : ''}`}
+                onClick={() => setIsReadingMode(!isReadingMode)}
+                title={isReadingMode ? '显示侧栏目录' : '沉浸模式（隐藏侧栏）'}
+              >
+                {isReadingMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                <span>{isReadingMode ? '退出沉浸' : '沉浸'}</span>
+              </button>
+
+              {/* 标为已读 */}
               <button
                 type="button"
                 className={`podcast-action-btn ${readEpisodeIds.includes(activeEpisode.id) ? 'active' : ''}`}
@@ -385,10 +456,25 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
             <div className="podcast-article-tags">
               <span className="podcast-article-num">第 {activeEpisode.id} 篇</span>
               <span className="podcast-article-column-tag">{activeEpisode.column}</span>
-              <span className="podcast-article-words">{activeEpisode.wordCount} 字 · 听力对谈逐字稿</span>
+              <span className="podcast-article-mode-tag">{activeEpisode.modeLabel || '独白漫谈'}</span>
+              <span className="podcast-article-words">
+                {activeEpisode.wordCount} 字 · 约 {activeEpisode.readTimeMinutes || 5} 分钟读完
+              </span>
             </div>
             <h1 className="podcast-article-h1">{activeEpisode.fullTitle}</h1>
           </div>
+
+          {/* 核心切片：睡前心智滑梯 */}
+          {activeEpisode.sliceQuote && (
+            <div className="podcast-insight-slice-card">
+              <div className="podcast-slice-header">
+                <Sparkles size={14} className="podcast-slice-icon" />
+                <span className="podcast-slice-label">睡前认知切片 · 心智滑梯</span>
+                <span className="podcast-slice-hint">30秒摄入核心观点</span>
+              </div>
+              <p className="podcast-slice-quote">“{activeEpisode.sliceQuote}”</p>
+            </div>
+          )}
 
           {/* 逐字稿正文主体 */}
           {isLoadingContent ? (
@@ -398,7 +484,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
             </div>
           ) : (
             <div
-              className="podcast-transcript-body"
+              className={`podcast-transcript-body font-size-${fontSize}`}
               dangerouslySetInnerHTML={{ __html: formattedHtml }}
             />
           )}
