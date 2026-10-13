@@ -6018,3 +6018,208 @@
   gap: 0.75rem;
 }
 
+
+
+/* ==========================================================================
+   选章下拉轻量菜单与人物智库主轴 (Inline Popover Dropdown)
+   ========================================================================== */
+
+/* 人物主轴徽章栏 */
+.contrast-figure-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.contrast-figure-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(217, 119, 6, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+  padding: 0.22rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.contrast-figure-meta-tip {
+  font-size: 0.76rem;
+  color: #a8a29e;
+}
+
+/* 按钮下拉 Popover */
+.contrast-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.contrast-btn-ep-title {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contrast-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 400px;
+  max-width: 90vw;
+  background: #171412;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(245, 158, 11, 0.12);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleUp 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.contrast-dd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.15);
+  background: #1c1815;
+}
+
+.contrast-dd-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #fde68a;
+}
+
+.contrast-dd-close-btn {
+  background: transparent;
+  border: none;
+  color: #a8a29e;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.contrast-dd-search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #13100e;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 6px;
+  padding: 0.45rem 0.75rem;
+  margin: 0.75rem 1rem 0.45rem 1rem;
+}
+
+.contrast-dd-search-input {
+  background: transparent;
+  border: none;
+  color: #fafaf9;
+  outline: none;
+  width: 100%;
+  font-size: 0.84rem;
+}
+
+.contrast-dd-clear {
+  background: transparent;
+  border: none;
+  color: #78716c;
+  cursor: pointer;
+}
+
+.contrast-dd-pills {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 1rem 0.5rem 1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.contrast-dd-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.contrast-dd-pill {
+  background: #1c1815;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #a8a29e;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.contrast-dd-pill.active {
+  background: rgba(217, 119, 6, 0.25);
+  border-color: #f59e0b;
+  color: #fbbf24;
+}
+
+.contrast-dd-scroll-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.4rem 1rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.contrast-dd-item {
+  background: #1c1815;
+  border: 1px solid rgba(245, 158, 11, 0.12);
+  border-radius: 6px;
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.contrast-dd-item:hover {
+  background: #26201b;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.contrast-dd-item.active {
+  background: rgba(217, 119, 6, 0.2);
+  border-color: #f59e0b;
+}
+
+.contrast-dd-item-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.76rem;
+}
+
+.contrast-dd-id {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.contrast-dd-col {
+  color: #a8a29e;
+}
+
+.contrast-dd-read {
+  color: #10b981;
+  margin-left: auto;
+  font-size: 0.72rem;
+}
+
+.contrast-dd-title-text {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #fafaf9;
+  margin-bottom: 0.2rem;
+}
+
+.contrast-dd-meta {
+  font-size: 0.72rem;
+  color: #78716c;
+}

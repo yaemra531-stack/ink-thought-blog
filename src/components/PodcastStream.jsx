@@ -9,14 +9,13 @@ import {
   Sparkles,
   Send,
   Type,
-  Quote,
   PenLine,
   Copy,
   Check,
-  X,
   Columns,
   AlignLeft,
-  Share2
+  User,
+  Compass
 } from 'lucide-react';
 import podcastsIndex from '../content/podcastsIndex.json';
 import { renderMarkdown } from '../utils/markdownParser';
@@ -34,6 +33,15 @@ const FONT_SIZE_LABELS = {
   lg: '稍大',
   xl: '特大',
 };
+
+// 预留的人物智库体系配置（以人为基础展开阅读）
+const AVAILABLE_FIGURES = [
+  { id: 'justin-sun', name: '孙宇晨', series: '财富自由革命之路', count: 154, active: true },
+  { id: 'alex-wang', name: 'Alex Wang', series: 'Meta AI / Scale 创业与技术', count: '即将上架', active: false },
+  { id: 'dario-amodei', name: 'Dario Amodei', series: 'Anthropic / 尺度法则与AI前沿', count: '即将上架', active: false },
+  { id: 'sam-altman', name: 'Sam Altman', series: 'OpenAI / 创业哲学与AGI', count: '即将上架', active: false },
+  { id: 'paul-graham', name: 'Paul Graham', series: 'YC 创业与黑客精神精读', count: '即将上架', active: false },
+];
 
 export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   // 当前篇目 ID
@@ -53,14 +61,14 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   // 当前激活的切片索引（0 代表查看全部切片对照流，1 代表只看切片1...）
   const [activeSliceIdx, setActiveSliceIdx] = useState(0);
 
-  // 篇目全量目录弹窗是否打开
+  // 章节下拉选择浮层（采用按钮正下方的无模糊轻巧 Popover，绝不遮盖全屏）
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
 
   // 正文原始文本与加载状态
   const [currentEpisodeContent, setCurrentEpisodeContent] = useState('');
   const [isLoadingContent, setIsLoadingContent] = useState(false);
 
-  // 内存缓存已加载的内容，切换篇目时秒开，杜绝白屏/黑屏
+  // 内存缓存已加载的内容，切换篇目时 0 延迟秒开
   const contentCacheRef = useRef({});
 
   // 字号档位
@@ -100,6 +108,22 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   const [copiedKey, setCopiedKey] = useState(null);
 
   const contentRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  // 点击外部自动关闭章节下拉菜单
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsCatalogOpen(false);
+      }
+    }
+    if (isCatalogOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isCatalogOpen]);
 
   // 提取全部栏目
   const columnsList = useMemo(() => {
@@ -122,7 +146,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     ];
   }, []);
 
-  // 当前篇目元信息（保底第一篇）
+  // 当前篇目元信息
   const activeEpisode = useMemo(() => {
     return podcastsIndex.find(p => p.id === activeEpisodeId) || podcastsIndex[0];
   }, [activeEpisodeId]);
@@ -145,16 +169,14 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     });
   }, [searchQuery, selectedColumn]);
 
-  // 安全切换篇目：同步清理状态与重置切片，避免黑屏
+  // 优雅切换篇目
   const handleSelectEpisode = newId => {
-    if (newId === activeEpisodeId) {
-      setIsCatalogOpen(false);
-      return;
-    }
+    setIsCatalogOpen(false);
+    if (newId === activeEpisodeId) return;
+
     setActiveEpisodeId(newId);
     setActiveSliceIdx(0);
     setEditingNoteSliceKey(null);
-    setIsCatalogOpen(false);
   };
 
   // 加载逐字稿文本
@@ -164,7 +186,6 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     let isMounted = true;
     const cacheKey = activeEpisode.id;
 
-    // 如果内存缓存中已有该篇，直接同步设置，0 延迟渲染
     if (contentCacheRef.current[cacheKey]) {
       setCurrentEpisodeContent(contentCacheRef.current[cacheKey]);
       setIsLoadingContent(false);
@@ -192,7 +213,6 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
         } catch (err) {
           console.error('加载逐字稿失败', err);
           if (isMounted) {
-            // 降级兜底：使用元信息里的 excerpt，确保页面绝不黑屏
             const fallback = `# ${activeEpisode.fullTitle}\n\n> 出自《孙宇晨访谈逐字稿》\n\n🎙️ **孙宇晨** · 0:00\n\n${activeEpisode.excerpt || '正在载入内容...'}`;
             setCurrentEpisodeContent(fallback);
             setIsLoadingContent(false);
@@ -226,7 +246,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
 
     const slices = [];
 
-    // 1. 尝试按对谈结构切分（> 💬 **提问 / 对话** 与 🎙️ **孙宇晨**）
+    // 对谈结构
     const dialogTurnRegex = /(?:^|\n)>\s*💬\s*\*\*提问\s*\/\s*对话\*\*(?:[^\n]*)\n+([\s\S]*?)(?=(?:^|\n)>\s*💬|\n*$)/g;
     let match;
     let index = 1;
@@ -264,7 +284,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       index++;
     }
 
-    // 2. 独白漫谈或短篇保底逻辑
+    // 独白漫谈或短篇保底逻辑
     if (slices.length === 0) {
       const paras = raw
         .split(/\n\n+/)
@@ -292,7 +312,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       }
     }
 
-    // 3. 终极防呆：若文章为空，提供切片提示，绝不黑屏
+    // 终极防呆
     if (slices.length === 0) {
       slices.push({
         id: 1,
@@ -362,7 +382,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     md += `> ${slice.originalQuote}\n\n`;
     md += `**【核心论点剖析】**\n${slice.title}\n${slice.assertion}\n\n`;
     if (noteObj?.text) {
-      md += `**【我的想法与笔记】**\n${noteObj.text}\n\n`;
+      md += `**【我的想法与随笔】**\n${noteObj.text}\n\n`;
     }
     md += `—— 来自《博客随笔 · 夜读对照》`;
 
@@ -398,6 +418,17 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     <div className="podcast-contrast-theme animate-fade-in" ref={contentRef}>
       {/* 顶部做题对照式导航容器（暖琥珀夜读风） */}
       <header className="contrast-topbar-container">
+        {/* 人物心智精读主轴徽章（支持以人为轴展开的深度阅读） */}
+        <div className="contrast-figure-badge-row">
+          <div className="contrast-figure-pill active" title="当前主读人物：孙宇晨">
+            <User size={12} className="text-amber-400" />
+            <span>精读人物 · 孙宇晨（共收录 154 篇）</span>
+          </div>
+          <div className="contrast-figure-meta-tip">
+            <span>以人物为主轴的高浓度认知阅读：定期精读 1~2 人，平复心率，深度滋养。</span>
+          </div>
+        </div>
+
         {/* 标题与描述 */}
         <div className="contrast-topbar-header">
           <div className="contrast-topbar-title-wrap">
@@ -412,17 +443,100 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
 
           {/* 右侧控制胶囊 */}
           <div className="contrast-topbar-controls">
-            {/* 切换篇目按钮 */}
-            <button
-              type="button"
-              className="contrast-ctrl-btn episode-selector-btn"
-              onClick={() => setIsCatalogOpen(true)}
-              title="浏览与选择 154 篇逐字稿"
-            >
-              <BookOpen size={14} className="text-amber-400" />
-              <span>#{activeEpisode.id} {activeEpisode.title}</span>
-              <span className="contrast-down-arrow">▾</span>
-            </button>
+            {/* 切换篇目按钮：使用挂在按钮下方的 Popover 下拉菜单，绝不模糊屏幕！ */}
+            <div className="contrast-dropdown-wrapper" ref={dropdownRef}>
+              <button
+                type="button"
+                className={`contrast-ctrl-btn episode-selector-btn ${isCatalogOpen ? 'active' : ''}`}
+                onClick={() => setIsCatalogOpen(!isCatalogOpen)}
+                title="浏览与切换 154 篇逐字稿章节"
+              >
+                <BookOpen size={14} className="text-amber-400" />
+                <span className="contrast-btn-ep-title">#{activeEpisode.id} {activeEpisode.title}</span>
+                <span className="contrast-down-arrow">{isCatalogOpen ? '▲' : '▾'}</span>
+              </button>
+
+              {/* 轻量章节下拉选择菜单（随按钮呼出，无任何遮罩/模糊） */}
+              {isCatalogOpen && (
+                <div className="contrast-dropdown-panel animate-scale-up">
+                  <div className="contrast-dd-header">
+                    <span className="contrast-dd-title">选读章节（收录 154 篇）</span>
+                    <button
+                      type="button"
+                      className="contrast-dd-close-btn"
+                      onClick={() => setIsCatalogOpen(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* 搜索框 */}
+                  <div className="contrast-dd-search-box">
+                    <Search size={13} className="text-amber-400" />
+                    <input
+                      type="text"
+                      placeholder="搜索章节编号、主题..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="contrast-dd-search-input"
+                      autoFocus
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="contrast-dd-clear"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 栏目分类胶囊 */}
+                  <div className="contrast-dd-pills">
+                    {columnsList.slice(0, 8).map(col => (
+                      <button
+                        key={col}
+                        type="button"
+                        className={`contrast-dd-pill ${selectedColumn === col ? 'active' : ''}`}
+                        onClick={() => setSelectedColumn(col)}
+                      >
+                        {col}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 章节滚动列表 */}
+                  <div className="contrast-dd-scroll-list">
+                    {filteredEpisodes.length === 0 ? (
+                      <div className="contrast-dd-empty">未匹配到相关章节</div>
+                    ) : (
+                      filteredEpisodes.map(item => {
+                        const isActive = item.id === activeEpisodeId;
+                        const isRead = readEpisodeIds.includes(item.id);
+                        return (
+                          <div
+                            key={item.id}
+                            className={`contrast-dd-item ${isActive ? 'active' : ''} ${isRead ? 'is-read' : ''}`}
+                            onClick={() => handleSelectEpisode(item.id)}
+                          >
+                            <div className="contrast-dd-item-top">
+                              <span className="contrast-dd-id">#{item.id}</span>
+                              <span className="contrast-dd-col">{item.column}</span>
+                              {isRead && <span className="contrast-dd-read">✓ 已过</span>}
+                            </div>
+                            <div className="contrast-dd-title-text">{item.title}</div>
+                            <div className="contrast-dd-meta">
+                              <span>{item.wordCount} 字 · 约 {item.readTimeMinutes} 分钟</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* 对照精读 / 全篇通读 切换 */}
             <div className="contrast-mode-switch">
@@ -589,7 +703,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                       <span>{slice.bone}</span>
                     </div>
 
-                    {/* 逐块拆解与阅读顺序 */}
+                    {/* 逐块拆解与认知逻辑 */}
                     <div className="contrast-breakdown-box">
                       <div className="contrast-breakdown-title">
                         <span>▶ 逐块拆解与认知逻辑</span>
@@ -733,82 +847,6 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
           </button>
         )}
       </footer>
-
-      {/* 154 篇全量目录选择抽屉/弹窗 */}
-      {isCatalogOpen && (
-        <div className="contrast-catalog-overlay" onClick={() => setIsCatalogOpen(false)}>
-          <div className="contrast-catalog-modal" onClick={e => e.stopPropagation()}>
-            <div className="contrast-catalog-header">
-              <div className="contrast-cat-title">
-                <BookOpen size={16} className="text-amber-400" />
-                <span>逐字稿目录 (收录 154 篇)</span>
-              </div>
-              <button
-                type="button"
-                className="contrast-cat-close"
-                onClick={() => setIsCatalogOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* 搜索与分类 */}
-            <div className="contrast-cat-filters">
-              <div className="contrast-cat-search-box">
-                <Search size={14} className="text-amber-400" />
-                <input
-                  type="text"
-                  placeholder="搜索篇目编号、主题或关键词..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="contrast-cat-input"
-                />
-                {searchQuery && (
-                  <button type="button" onClick={() => setSearchQuery('')} className="contrast-cat-clear">✕</button>
-                )}
-              </div>
-
-              <div className="contrast-cat-pills">
-                {columnsList.slice(0, 10).map(col => (
-                  <button
-                    key={col}
-                    type="button"
-                    className={`contrast-cat-pill ${selectedColumn === col ? 'active' : ''}`}
-                    onClick={() => setSelectedColumn(col)}
-                  >
-                    {col}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 篇目滚动列表 */}
-            <div className="contrast-cat-list">
-              {filteredEpisodes.map(item => {
-                const isActive = item.id === activeEpisodeId;
-                const isRead = readEpisodeIds.includes(item.id);
-                return (
-                  <div
-                    key={item.id}
-                    className={`contrast-cat-item ${isActive ? 'active' : ''} ${isRead ? 'is-read' : ''}`}
-                    onClick={() => handleSelectEpisode(item.id)}
-                  >
-                    <div className="contrast-cat-item-top">
-                      <span className="contrast-cat-id">#{item.id}</span>
-                      <span className="contrast-cat-col">{item.column}</span>
-                      {isRead && <span className="contrast-cat-read">✓ 已读</span>}
-                    </div>
-                    <div className="contrast-cat-item-title">{item.title}</div>
-                    <div className="contrast-cat-item-meta">
-                      <span>{item.wordCount} 字 · 约 {item.readTimeMinutes} 分钟</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
