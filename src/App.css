@@ -5451,6 +5451,7 @@
 }
 
 .contrast-dual-pair {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 3.5rem;
@@ -5459,10 +5460,27 @@
   align-items: start;
 }
 
+.contrast-dual-pair::before {
+  content: '';
+  position: absolute;
+  top: 2.75rem;
+  bottom: 2.75rem;
+  left: 50%;
+  border-left: 1px dashed var(--border-strong);
+  pointer-events: none;
+}
+
 @media (max-width: 960px) {
   .contrast-dual-pair {
     grid-template-columns: 1fr;
     gap: 2.25rem;
+  }
+  .contrast-dual-pair::before {
+    display: none;
+  }
+  .contrast-pane-right {
+    border-top: 1px dashed var(--border-strong);
+    padding-top: 1.5rem;
   }
 }
 
