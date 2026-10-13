@@ -13,6 +13,7 @@ import {
   User,
   Sparkles,
   Activity,
+  Headphones,
 } from 'lucide-react';
 
 export default function Navbar({
@@ -46,6 +47,7 @@ export default function Navbar({
     { id: 'posts', label: '随笔', icon: <BookOpen size={18} /> },
     { id: 'thoughts', label: '速记', icon: <Sparkles size={18} /> },
     { id: 'fitness', label: '运动', icon: <Activity size={18} /> },
+    { id: 'podcast', label: '夜读', icon: <Headphones size={18} /> },
     { id: 'reference', label: '参考', icon: <BookMarked size={18} /> },
   ];
 

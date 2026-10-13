@@ -22,7 +22,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(() => {
     try {
       const paramTab = new URLSearchParams(window.location.search).get("tab");
-      if (paramTab && ["posts", "thoughts", "fitness", "reference", "about"].includes(paramTab)) {
+      if (paramTab && ["posts", "thoughts", "fitness", "podcast", "reference", "about"].includes(paramTab)) {
         return paramTab;
       }
     } catch {}
