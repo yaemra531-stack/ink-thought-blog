@@ -7031,3 +7031,30 @@
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.25);
 }
+
+
+/* 引用引子与注解 */
+.contrast-lead-p {
+  font-style: italic;
+  color: var(--text-secondary);
+  margin-bottom: 0.85rem;
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+.contrast-note-p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.85rem;
+  border-top: 1px dashed rgba(var(--accent-rgb), 0.18);
+  padding-top: 0.45rem;
+  line-height: 1.5;
+}
+
+.contrast-dd-item-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}

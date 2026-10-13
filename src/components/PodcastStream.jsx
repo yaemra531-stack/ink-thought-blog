@@ -15,19 +15,12 @@ import {
   Columns,
   AlignLeft,
   User,
-  Compass,
-  Headphones
+  Headphones,
+  Trash2
 } from 'lucide-react';
-import TranscriptAnnotations from './TranscriptAnnotations';
-import podcastsIndex from '../content/podcastsIndex.json';
 import alanInterview from '../content/alanInterview.json';
+import wealthFreedomRaw from '../content/wealthFreedomCurated.json';
 import { renderMarkdown } from '../utils/markdownParser';
-
-// 懒加载所有分篇 Markdown 文本（154篇原声）
-const podcastModules = import.meta.glob('/src/content/podcasts/*.md', {
-  query: '?raw',
-  import: 'default',
-});
 
 const FONT_SIZES = ['sm', 'base', 'lg', 'xl'];
 const FONT_SIZE_LABELS = {
@@ -44,8 +37,8 @@ const AVAILABLE_FIGURES = [
     name: '孙宇晨',
     avatar: '👤',
     title: '波场 TRON 创始人',
-    desc: '2026 艾伦访谈 7 专题 + 财富自由之路 154 篇全集',
-    countBadge: '161 篇收录',
+    desc: '2026 艾伦访谈 7 专题 + 财富自由之路 167 精读专题全集',
+    countBadge: '174 篇收录',
     active: true,
   },
   {
@@ -77,8 +70,30 @@ const AVAILABLE_FIGURES = [
   },
 ];
 
+// 归一化财富自由之路 167 篇高浓度精读专题
+const wealthFreedomTopics = wealthFreedomRaw.map((item, idx) => ({
+  id: idx + 1,
+  key: `wf-${item['期号']}-${idx + 1}`,
+  episodeNo: item['期号'],
+  unit: item['单元'] || '通用',
+  originalTitle: item['原标题'] || item['专题'],
+  title: item['专题'] || item['原标题'],
+  core: item['命题'] || '',
+  closing: item['收束'] || '',
+  segments: (item.segments || []).map((seg, sIdx) => ({
+    id: sIdx + 1,
+    time: seg.time || '',
+    lead: seg.lead || '',
+    quote: Array.isArray(seg.quote) ? seg.quote : [seg.quote].filter(Boolean),
+    claim: seg.claim || '',
+    skeleton: Array.isArray(seg.skeleton) ? seg.skeleton : [seg.skeleton].filter(Boolean),
+    hook: seg.hook || '',
+    note: seg.note || '',
+  })),
+}));
+
 export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
-  // 当前阅读系列：'alan-2026'（2026 最新 4.5h 访谈，默认）或 'wealth-freedom-154'（经典 154 篇逐字稿）
+  // 当前阅读系列：'alan-2026'（2026 最新 4.5h 访谈，默认）或 'wealth-freedom-154'（财富自由精读 167 专题）
   const [activeSeries, setActiveSeries] = useState(() => {
     try {
       return localStorage.getItem('ink_podcast_active_series') || 'alan-2026';
@@ -88,23 +103,21 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   });
 
   // 2026 艾伦访谈当前专题 ID（1 - 7）
-  const [activeTopicId, setActiveTopicId] = useState(() => {
+  const [activeAlanTopicId, setActiveAlanTopicId] = useState(() => {
     try {
       const saved = parseInt(localStorage.getItem('ink_alan_last_topic'), 10);
-      if (saved >= 1 && saved <= 7) return saved;
+      if (saved >= 1 && saved <= alanInterview.topics.length) return saved;
     } catch {}
     return 1;
   });
 
-  // 154 篇逐字稿篇目 ID
-  const [activeEpisodeId, setActiveEpisodeId] = useState(() => {
+  // 财富自由之路精读专题 ID（1 - 167）
+  const [activeWfTopicId, setActiveWfTopicId] = useState(() => {
     try {
-      const saved = localStorage.getItem('ink_podcast_last_read');
-      if (saved && podcastsIndex.some(p => p.id === saved)) {
-        return saved;
-      }
+      const saved = parseInt(localStorage.getItem('ink_wf_last_topic'), 10);
+      if (saved >= 1 && saved <= wealthFreedomTopics.length) return saved;
     } catch {}
-    return '006';
+    return 2; // 默认停在第 006 期创刊词「先给自己做战略」
   });
 
   // 浏览模式：'contrast'（左右对照精读，默认）或 'full'（全篇通读）
@@ -118,15 +131,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   const [isFigureMenuOpen, setIsFigureMenuOpen] = useState(false);
   const figureDropdownRef = useRef(null);
 
-  // 章节/专题下拉选择浮层（采用按钮正下方的无模糊轻巧 Popover，绝不遮盖全屏）
+  // 章节/专题下拉选择浮层
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-
-  // 正文原始文本与加载状态（用于 154 篇）
-  const [currentEpisodeContent, setCurrentEpisodeContent] = useState('');
-  const [isLoadingContent, setIsLoadingContent] = useState(false);
-
-  // 内存缓存已加载的内容，切换篇目时 0 延迟秒开
-  const contentCacheRef = useRef({});
+  const dropdownRef = useRef(null);
 
   // 字号档位
   const [fontSize, setFontSize] = useState(() => {
@@ -159,15 +166,14 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     }
   });
 
-  // 正在编辑的切片笔记输入框
-  const [editingNoteSliceKey, setEditingNoteSliceKey] = useState(null);
+  // 正在编辑的切片笔记暂存
+  const [activeNoteSliceKey, setActiveNoteSliceKey] = useState(null);
   const [noteDraftText, setNoteDraftText] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
 
   const contentRef = useRef(null);
-  const dropdownRef = useRef(null);
 
-  // 点击外部自动关闭章节下拉菜单
+  // 点击外部关闭下拉菜单
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -194,319 +200,150 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     }
   };
 
-  // 提取全部栏目（154 篇用）
+  // 提取全部单元栏目（财富自由之路 167 篇用）
   const columnsList = useMemo(() => {
     const set = new Set();
-    podcastsIndex.forEach(p => {
-      if (p.column && p.column !== '漫谈') set.add(p.column);
+    wealthFreedomTopics.forEach(t => {
+      if (t.unit) set.add(t.unit);
     });
-    return [
-      '全部',
-      '创刊词',
-      '战略',
-      '90后不买房',
-      '比特币',
-      '全球流动性过剩',
-      '医疗',
-      '番外',
-      ...Array.from(set).filter(
-        c => !['全部', '创刊词', '战略', '90后不买房', '比特币', '全球流动性过剩', '医疗', '番外'].includes(c)
-      ),
-    ];
+    return ['全部', ...Array.from(set)];
   }, []);
 
-  // 2026 艾伦访谈当前专题
-  const activeTopic = useMemo(() => {
-    return alanInterview.topics.find(t => t.id === activeTopicId) || alanInterview.topics[0];
-  }, [activeTopicId]);
+  // 当前选中的专题对象
+  const currentAlanTopic = useMemo(() => {
+    return alanInterview.topics.find(t => t.id === activeAlanTopicId) || alanInterview.topics[0];
+  }, [activeAlanTopicId]);
 
-  // 154 篇当前篇目元信息
-  const activeEpisode = useMemo(() => {
-    return podcastsIndex.find(p => p.id === activeEpisodeId) || podcastsIndex[0];
-  }, [activeEpisodeId]);
+  const currentWfTopic = useMemo(() => {
+    return wealthFreedomTopics.find(t => t.id === activeWfTopicId) || wealthFreedomTopics[0];
+  }, [activeWfTopicId]);
 
-  // 过滤后的 154 篇篇目列表
-  const filteredEpisodes = useMemo(() => {
-    return podcastsIndex.filter(item => {
-      const matchesSearch =
-        !searchQuery ||
-        item.id.includes(searchQuery) ||
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.column.toLowerCase().includes(searchQuery.toLowerCase());
+  const activeTopic = activeSeries === 'alan-2026' ? currentAlanTopic : currentWfTopic;
 
-      const matchesColumn =
-        selectedColumn === '全部' ||
-        item.column === selectedColumn ||
-        (selectedColumn === '90后' && item.column.includes('90后'));
-
-      return matchesSearch && matchesColumn;
-    });
-  }, [searchQuery, selectedColumn]);
-
-  // 过滤后的 2026 专题列表
-  const filteredTopics = useMemo(() => {
+  // 过滤后的目录列表
+  const filteredAlanTopics = useMemo(() => {
     if (!searchQuery) return alanInterview.topics;
     const q = searchQuery.toLowerCase();
     return alanInterview.topics.filter(t => 
       t.title.toLowerCase().includes(q) ||
-      t.core.toLowerCase().includes(q) ||
-      String(t.id).includes(q)
+      (t.core && t.core.toLowerCase().includes(q))
     );
   }, [searchQuery]);
 
-  // 切换 154 篇篇目
-  const handleSelectEpisode = newId => {
-    setIsCatalogOpen(false);
-    if (newId === activeEpisodeId) return;
+  const filteredWfTopics = useMemo(() => {
+    return wealthFreedomTopics.filter(item => {
+      const matchCol = selectedColumn === '全部' || item.unit === selectedColumn;
+      if (!matchCol) return false;
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        item.title.toLowerCase().includes(q) ||
+        item.core.toLowerCase().includes(q) ||
+        item.originalTitle.toLowerCase().includes(q) ||
+        item.episodeNo.toLowerCase().includes(q) ||
+        item.unit.toLowerCase().includes(q)
+      );
+    });
+  }, [selectedColumn, searchQuery]);
 
-    setActiveEpisodeId(newId);
+  // 选择具体专题
+  const handleSelectAlanTopic = topicId => {
+    setActiveAlanTopicId(topicId);
+    localStorage.setItem('ink_alan_last_topic', topicId);
     setActiveSliceIdx(0);
-    setEditingNoteSliceKey(null);
-  };
-
-  // 切换 2026 专题
-  const handleSelectTopic = newTopicId => {
     setIsCatalogOpen(false);
-    if (newTopicId === activeTopicId) return;
-
-    setActiveTopicId(newTopicId);
-    localStorage.setItem('ink_alan_last_topic', String(newTopicId));
-    setActiveSliceIdx(0);
-    setEditingNoteSliceKey(null);
     if (contentRef.current) {
       contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
-  // 加载 154 篇逐字稿文本
-  useEffect(() => {
-    if (activeSeries !== 'wealth-freedom-154' || !activeEpisode) return;
-
-    let isMounted = true;
-    const cacheKey = activeEpisode.id;
-
-    if (contentCacheRef.current[cacheKey]) {
-      setCurrentEpisodeContent(contentCacheRef.current[cacheKey]);
-      setIsLoadingContent(false);
-      localStorage.setItem('ink_podcast_last_read', activeEpisode.id);
-      if (contentRef.current) {
-        contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-      return;
-    }
-
-    setIsLoadingContent(true);
-
-    const loadContent = async () => {
-      const filePath = `/src/content/podcasts/${activeEpisode.filename}`;
-      const loader = podcastModules[filePath];
-
-      if (loader) {
-        try {
-          const raw = await loader();
-          if (isMounted) {
-            contentCacheRef.current[cacheKey] = raw;
-            setCurrentEpisodeContent(raw);
-            setIsLoadingContent(false);
-          }
-        } catch (err) {
-          console.error('加载逐字稿失败', err);
-          if (isMounted) {
-            const fallback = `# ${activeEpisode.fullTitle}\n\n> 出自《孙宇晨访谈逐字稿》\n\n🎙️ **孙宇晨** · 0:00\n\n${activeEpisode.excerpt || '正在载入内容...'}`;
-            setCurrentEpisodeContent(fallback);
-            setIsLoadingContent(false);
-          }
-        }
-      } else {
-        if (isMounted) {
-          const fallback = `# ${activeEpisode.fullTitle}\n\n🎙️ **孙宇晨** · 0:00\n\n${activeEpisode.excerpt || '逐字稿加载中...'}`;
-          setCurrentEpisodeContent(fallback);
-          setIsLoadingContent(false);
-        }
-      }
-    };
-
-    loadContent();
-    localStorage.setItem('ink_podcast_last_read', activeEpisode.id);
-
+  const handleSelectWfTopic = topicId => {
+    setActiveWfTopicId(topicId);
+    localStorage.setItem('ink_wf_last_topic', topicId);
+    setActiveSliceIdx(0);
+    setIsCatalogOpen(false);
     if (contentRef.current) {
       contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
 
-    return () => {
-      isMounted = false;
-    };
-  }, [activeSeries, activeEpisodeId, activeEpisode]);
-
-  // ========== 2026 艾伦访谈切片构建 ==========
-  const alanSlices = useMemo(() => {
+  // 构建当前专题的双栏切片数据
+  const currentSlices = useMemo(() => {
     if (!activeTopic) return [];
-    return activeTopic.segments.map((seg, idx) => ({
+    const isAlan = activeSeries === 'alan-2026';
+    return (activeTopic.segments || []).map((seg, idx) => ({
       id: idx + 1,
       tag: `切片 0${idx + 1} · 核心论点剖析`,
       title: seg.claim,
-      assertion: seg.lead || `原访谈 ${seg.time_start} - ${seg.time_end} 关键认知`,
+      assertion: seg.lead || `原声 ${seg.time || ''} 关键认知`,
       lead: seg.lead,
       bone: `先抓骨架 · ${seg.skeleton[0] || '核心逻辑推演'}`,
-      skeletonList: seg.skeleton,
+      skeletonList: seg.skeleton || [],
       hook: seg.hook,
-      originalQuote: seg.quote.join('\n\n'),
-      timeBadge: `🎙️ 孙宇晨 · ${seg.time_start} - ${seg.time_end} 原声`,
-      sliceKey: `alan-t${activeTopic.id}-s${idx + 1}`,
-      sourceHint: `出自《孙宇晨 × 邵艾伦｜年轻人如何抓住AI时代的机会？》专题 0${activeTopic.id} · ${activeTopic.title}`,
+      originalQuoteList: seg.quote || [],
+      originalQuote: (seg.quote || []).join('\n\n'),
+      timeBadge: isAlan
+        ? `🎙️ 孙宇晨 · ${seg.time_start || '0:00'} - ${seg.time_end || ''} 原声`
+        : `🎙️ 孙宇晨 · ${seg.time || ''} 原话`,
+      sliceKey: isAlan
+        ? `alan-t${activeTopic.id}-s${idx + 1}`
+        : `wf-t${activeTopic.id}-s${idx + 1}`,
+      sourceHint: isAlan
+        ? `出自《孙宇晨 × 邵艾伦｜年轻人如何抓住AI时代的机会？》专题 0${activeTopic.id} · ${activeTopic.title}`
+        : `出自《财富自由革命之路》第 ${activeTopic.episodeNo} 期 · ${activeTopic.originalTitle}`,
       topicCore: activeTopic.core,
+      note: seg.note || '',
     }));
-  }, [activeTopic]);
+  }, [activeSeries, activeTopic]);
 
-  // ========== 154 篇切片解析构建 ==========
-  const parsedClassicSlices = useMemo(() => {
-    const raw = currentEpisodeContent || activeEpisode.excerpt || '';
-    if (!raw) return [];
-
-    const slices = [];
-    const dialogTurnRegex = /(?:^|\n)>\s*💬\s*\*\*提问\s*\/\s*对话\*\*(?:[^\n]*)\n+([\s\S]*?)(?=(?:^|\n)>\s*💬|\n*$)/g;
-    let match;
-    let index = 1;
-
-    while ((match = dialogTurnRegex.exec(raw)) !== null) {
-      const block = match[1].trim();
-      if (!block) continue;
-
-      const questionMatch = block.match(/^>\s*(.*?)(?=\n*🎙️|\n*$)/);
-      const question = questionMatch ? questionMatch[1].replace(/^>\s*/, '').trim() : '核心认知问题';
-
-      const answerMatch = block.match(/🎙️\s*\*\*孙宇晨\*\*(?:\s*·\s*(\d+:\d+))?\n+([\s\S]*)/);
-      const time = answerMatch && answerMatch[1] ? answerMatch[1] : '0:00';
-      const answerRaw = answerMatch ? answerMatch[2].trim() : block;
-
-      const paras = answerRaw.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
-      const leadSentence = paras[0] || '';
-      const boneExcerpt = leadSentence.slice(0, 140);
-
-      slices.push({
-        id: index,
-        tag: `Q${index} · 核心论点剖析`,
-        title: question,
-        assertion: boneExcerpt.length > 70 ? `${boneExcerpt.slice(0, 70)}...` : boneExcerpt,
-        bone: `先抓骨架 · ${leadSentence.slice(0, 26) || '核心逻辑判断'}`,
-        skeletonList: paras.slice(1, 3).map((p, i) => {
-          const cleanP = p.replace(/\*\*/g, '').slice(0, 90);
-          return i === 0 ? `先看底层逻辑 · ${cleanP}` : `再看现实误区与破局 · ${cleanP}`;
-        }),
-        originalQuote: answerRaw.slice(0, 600),
-        timeBadge: `🎙️ 孙宇晨 · ${time} 原声切片`,
-        sliceKey: `${activeEpisode.id}-${index}`,
-        sourceHint: `出自《${activeEpisode.fullTitle}》原声访谈逐字稿记录。`,
-      });
-
-      index++;
-    }
-
-    if (slices.length === 0) {
-      const paras = raw
-        .split(/\n\n+/)
-        .map(p => p.trim())
-        .filter(p => p && !p.startsWith('#') && !p.startsWith('>'));
-
-      let sliceIdx = 1;
-      for (let i = 0; i < paras.length && sliceIdx <= 6; i += 2) {
-        const p1 = paras[i] || '';
-        const p2 = paras[i + 1] || '';
-        if (p1.length < 30) continue;
-
-        slices.push({
-          id: sliceIdx,
-          tag: `切片 0${sliceIdx} · 核心论点剖析`,
-          title: p1.slice(0, 36) + '...',
-          assertion: p1.slice(0, 95) + '...',
-          bone: `先抓骨架 · ${p1.slice(0, 24)}`,
-          skeletonList: p2 ? [`核心展开 · ${p2.slice(0, 100)}...`] : [`要点拆解 · 认清本质，平复心率与脑电波。`],
-          originalQuote: `${p1}\n\n${p2}`.slice(0, 600),
-          timeBadge: `🎙️ 孙宇晨 · 音频片段`,
-          sliceKey: `${activeEpisode.id}-${sliceIdx}`,
-          sourceHint: `出自《${activeEpisode.fullTitle}》原声访谈逐字稿记录。`,
-        });
-        sliceIdx++;
-      }
-    }
-
-    if (slices.length === 0) {
-      slices.push({
-        id: 1,
-        tag: `切片 01 · 核心论点剖析`,
-        title: activeEpisode.title,
-        assertion: activeEpisode.sliceQuote || activeEpisode.excerpt || '正在解析本篇观点...',
-        bone: `先抓骨架 · ${activeEpisode.column || '漫谈'}`,
-        skeletonList: ['沉浸式听读，在熟悉语境中平复脑电波。'],
-        originalQuote: activeEpisode.excerpt || '音频逐字稿加载中...',
-        timeBadge: `🎙️ 孙宇晨 · 0:00 原声`,
-        sliceKey: `${activeEpisode.id}-1`,
-        sourceHint: `出自《${activeEpisode.fullTitle}》原声访谈逐字稿记录。`,
-      });
-    }
-
-    return slices;
-  }, [currentEpisodeContent, activeEpisode]);
-
-  // 当前激活系列对应的全部切片
-  const currentSeriesSlices = useMemo(() => {
-    return activeSeries === 'alan-2026' ? alanSlices : parsedClassicSlices;
-  }, [activeSeries, alanSlices, parsedClassicSlices]);
-
-  // 显示的切片列表
-  const displayedSlices = useMemo(() => {
-    if (activeSliceIdx === 0) return currentSeriesSlices;
-    const match = currentSeriesSlices.find(s => s.id === activeSliceIdx);
-    return match ? [match] : currentSeriesSlices;
-  }, [currentSeriesSlices, activeSliceIdx]);
-
-  // 全篇逐字稿格式化渲染
+  // 全篇通读 Markdown HTML 生成
   const formattedFullHtml = useMemo(() => {
+    if (!activeTopic) return '';
+    let md = `# ${activeTopic.episodeNo ? `第 ${activeTopic.episodeNo} 期　` : ''}${activeTopic.title}\n\n`;
     if (activeSeries === 'alan-2026') {
-      if (!activeTopic) return '';
-      let md = `# 专题 0${activeTopic.id}　${activeTopic.title}\n\n`;
       md += `*原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end} ｜ 孙宇晨 × 邵艾伦*\n\n`;
+    } else {
+      md += `*单元：${activeTopic.unit} ｜ 出自《${activeTopic.originalTitle}》*\n\n`;
+    }
+    if (activeTopic.core) {
       md += `**一句话命题：${activeTopic.core}**\n\n---\n\n`;
-      activeTopic.segments.forEach((seg, idx) => {
-        md += `### 切片 0${idx + 1}（${seg.time_start} – ${seg.time_end}）\n\n`;
-        if (seg.lead) md += `*${seg.lead}*\n\n`;
-        md += `**原话**\n\n`;
-        seg.quote.forEach(q => {
-          md += `> ${q}\n>\n`;
-        });
+    }
+    (activeTopic.segments || []).forEach((seg, idx) => {
+      md += `### 切片 0${idx + 1} ${seg.time ? `（${seg.time}）` : ''}\n\n`;
+      if (seg.lead) md += `*${seg.lead}*\n\n`;
+      md += `**原话**\n\n`;
+      (seg.quote || []).forEach(q => {
+        md += `> ${q}\n>\n`;
+      });
+      if (seg.claim) {
         md += `\n**命题**　${seg.claim}\n\n`;
+      }
+      if (seg.skeleton && seg.skeleton.length > 0) {
         md += `**骨架**\n\n`;
         seg.skeleton.forEach(s => {
           md += `- ${s}\n`;
         });
-        if (seg.hook) {
-          md += `\n*${seg.hook}*\n\n`;
-        }
-        md += `---\n\n`;
-      });
-      if (activeTopic.closing) {
-        md += `### 今晚收束\n\n`;
+      }
+      if (seg.hook) {
+        md += `\n*${seg.hook}*\n\n`;
+      }
+      if (seg.note) {
+        md += `\n<small>注：${seg.note}</small>\n\n`;
+      }
+      md += `---\n\n`;
+    });
+    if (activeTopic.closing) {
+      md += `### 今晚收束\n\n`;
+      if (Array.isArray(activeTopic.closing)) {
         activeTopic.closing.forEach(c => {
           md += `> ${c}\n`;
         });
+      } else {
+        md += `> ${activeTopic.closing}\n`;
       }
-      return renderMarkdown(md);
     }
-
-    if (!currentEpisodeContent) return '';
-    let processed = currentEpisodeContent;
-    processed = processed.replace(/^#\s+.*?\n+/, '');
-    processed = processed.replace(/^>\s+出自.*?合集.*?\n+/, '');
-    processed = processed.replace(/\*\*讲话人1\*\*/g, '');
-    processed = processed.replace(
-      /🎙️\s*\*\*孙宇晨\*\*(?:\s*·\s*(\d+:\d+))?/g,
-      (match, time) => {
-        const timeHtml = time ? `<span class="speaker-time">${time}</span>` : '';
-        return `<div class="speaker-bubble speaker-sun"><span class="speaker-name">🎙️ 孙宇晨</span>${timeHtml}</div>`;
-      }
-    );
-    return renderMarkdown(processed);
-  }, [activeSeries, activeTopic, currentEpisodeContent]);
+    return renderMarkdown(md);
+  }, [activeSeries, activeTopic]);
 
   // 保存切片随笔笔记
   const handleSaveSliceNote = sliceKey => {
@@ -525,64 +362,58 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       localStorage.setItem('ink_podcast_slice_notes', JSON.stringify(updated));
     } catch {}
 
-    setEditingNoteSliceKey(null);
+    setActiveNoteSliceKey(null);
     setNoteDraftText('');
   };
 
-  // 复制单张切片笔记卡片为 Markdown
-  const handleCopySliceCard = slice => {
-    const noteObj = sliceNotes[slice.sliceKey];
-    const sourceTitle = activeSeries === 'alan-2026'
-      ? `【2026 访谈 · 专题 0${activeTopic.id}】${activeTopic.title}`
-      : `【${activeEpisode.fullTitle}】`;
-
-    let md = `### ${sourceTitle} ${slice.tag}\n\n`;
-    md += `> ${slice.originalQuote}\n\n`;
-    md += `**【核心论点剖析】**\n${slice.title}\n${slice.assertion}\n\n`;
-    if (slice.skeletonList && slice.skeletonList.length > 0) {
-      md += `**【先抓骨架】**\n`;
-      slice.skeletonList.forEach(s => {
-        md += `- ${s}\n`;
-      });
-      md += `\n`;
-    }
-    if (slice.hook) {
-      md += `**【精辟金句】** ${slice.hook}\n\n`;
-    }
-    if (noteObj?.text) {
-      md += `**【我的随笔思考】**\n${noteObj.text}\n\n`;
-    }
-    md += `—— 来自《博客随笔 · 夜读对照》`;
-
-    navigator.clipboard.writeText(md).then(() => {
-      setCopiedKey(slice.sliceKey);
-      setTimeout(() => setCopiedKey(null), 2000);
-    }).catch(() => {});
+  // 删除切片随笔笔记
+  const handleDeleteSliceNote = sliceKey => {
+    const updated = { ...sliceNotes };
+    delete updated[sliceKey];
+    setSliceNotes(updated);
+    try {
+      localStorage.setItem('ink_podcast_slice_notes', JSON.stringify(updated));
+    } catch {}
   };
 
-  // 标为已读
-  const toggleMarkRead = id => {
-    setReadEpisodeIds(prev => {
-      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
-      localStorage.setItem('ink_podcast_read_history', JSON.stringify(next));
-      return next;
+  // 复制骨架卡片为引用文本
+  const handleCopySkeleton = (slice) => {
+    const content = `【${slice.title}】\n核心命题：${slice.topicCore}\n\n推演骨架：\n${slice.skeletonList.map(s => `• ${s}`).join('\n')}\n\n记忆钩子：${slice.hook || '把握根本，安稳入眠。'}\n（${slice.sourceHint}）`;
+    navigator.clipboard.writeText(content).then(() => {
+      setCopiedKey(slice.sliceKey);
+      setTimeout(() => setCopiedKey(null), 2000);
     });
   };
 
-  // 切换字号
+  // 字号切换
   const handleToggleFontSize = () => {
-    const nextIdx = (FONT_SIZES.indexOf(fontSize) + 1) % FONT_SIZES.length;
-    const nextSize = FONT_SIZES[nextIdx];
+    const currentIndex = FONT_SIZES.indexOf(fontSize);
+    const nextIndex = (currentIndex + 1) % FONT_SIZES.length;
+    const nextSize = FONT_SIZES[nextIndex];
     setFontSize(nextSize);
     localStorage.setItem('ink_podcast_font_size', nextSize);
   };
 
-  // 154 篇上一篇/下一篇
-  const currentClassicIndex = podcastsIndex.findIndex(p => p.id === activeEpisodeId);
-  const prevClassicEpisode = currentClassicIndex > 0 ? podcastsIndex[currentClassicIndex - 1] : null;
-  const nextClassicEpisode = currentClassicIndex < podcastsIndex.length - 1 ? podcastsIndex[currentClassicIndex + 1] : null;
+  // 标为已读
+  const toggleMarkRead = targetKey => {
+    const isRead = readEpisodeIds.includes(targetKey);
+    let updated;
+    if (isRead) {
+      updated = readEpisodeIds.filter(id => id !== targetKey);
+    } else {
+      updated = [...readEpisodeIds, targetKey];
+    }
+    setReadEpisodeIds(updated);
+    localStorage.setItem('ink_podcast_read_history', JSON.stringify(updated));
+  };
 
-  // 艾伦访谈进度统计
+  // 当前篇目的唯一键与状态
+  const currentEpisodeKey = activeSeries === 'alan-2026'
+    ? `alan-${activeAlanTopicId}`
+    : `wf-${activeWfTopicId}`;
+  const isCurrentRead = readEpisodeIds.includes(currentEpisodeKey);
+
+  // 艾伦访谈进度统计 (共 7 专题)
   const alanStats = useMemo(() => {
     const total = alanInterview.topics.length;
     const completed = alanInterview.topics.filter(t => readEpisodeIds.includes(`alan-${t.id}`)).length;
@@ -590,46 +421,58 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     return { completed, total, percent, isAllDone: completed === total && total > 0 };
   }, [readEpisodeIds]);
 
-  // 154 篇经典逐字稿进度统计
+  // 财富自由之路精读进度统计 (共 167 专题)
   const classicStats = useMemo(() => {
-    const total = podcastsIndex.length;
-    const completed = podcastsIndex.filter(p => readEpisodeIds.includes(p.id)).length;
+    const total = wealthFreedomTopics.length;
+    const completed = wealthFreedomTopics.filter(t => readEpisodeIds.includes(`wf-${t.id}`)).length;
     const percent = Math.round((completed / total) * 100);
     return { completed, total, percent, isAllDone: completed === total && total > 0 };
   }, [readEpisodeIds]);
 
   // 当前激活系列的进度统计
   const currentStats = activeSeries === 'alan-2026' ? alanStats : classicStats;
-  const currentUnit = activeSeries === 'alan-2026' ? '专题' : '篇';
+  const currentUnit = '专题';
 
-  // 2026 专题上一篇/下一篇
-  const prevTopic = activeTopicId > 1 ? alanInterview.topics[activeTopicId - 2] : null;
-  const nextTopic = activeTopicId < alanInterview.topics.length ? alanInterview.topics[activeTopicId] : null;
-
-  // 当前激活篇目的唯一键与已读状态
-  const currentEpisodeKey = activeSeries === 'alan-2026' ? `alan-${activeTopic.id}` : activeEpisode.id;
-  const isCurrentRead = readEpisodeIds.includes(currentEpisodeKey);
-  const hasNextItem = activeSeries === 'alan-2026' ? Boolean(nextTopic) : Boolean(nextClassicEpisode);
-
-  // 底部一键「打卡并顺畅阅读下一篇」
-  const handleCheckinAndNext = () => {
-    if (!isCurrentRead) {
-      toggleMarkRead(currentEpisodeKey);
-    }
+  // 翻页导航控制
+  const prevTopic = useMemo(() => {
     if (activeSeries === 'alan-2026') {
-      if (nextTopic) {
-        handleSelectTopic(nextTopic.id);
-      }
+      return activeAlanTopicId > 1 ? alanInterview.topics[activeAlanTopicId - 2] : null;
     } else {
-      if (nextClassicEpisode) {
-        handleSelectEpisode(nextClassicEpisode.id);
-      }
+      const idx = wealthFreedomTopics.findIndex(t => t.id === activeWfTopicId);
+      return idx > 0 ? wealthFreedomTopics[idx - 1] : null;
+    }
+  }, [activeSeries, activeAlanTopicId, activeWfTopicId]);
+
+  const nextTopic = useMemo(() => {
+    if (activeSeries === 'alan-2026') {
+      return activeAlanTopicId < alanInterview.topics.length ? alanInterview.topics[activeAlanTopicId] : null;
+    } else {
+      const idx = wealthFreedomTopics.findIndex(t => t.id === activeWfTopicId);
+      return idx < wealthFreedomTopics.length - 1 ? wealthFreedomTopics[idx + 1] : null;
+    }
+  }, [activeSeries, activeAlanTopicId, activeWfTopicId]);
+
+  const handleGotoPrevTopic = () => {
+    if (!prevTopic) return;
+    if (activeSeries === 'alan-2026') {
+      handleSelectAlanTopic(prevTopic.id);
+    } else {
+      handleSelectWfTopic(prevTopic.id);
+    }
+  };
+
+  const handleGotoNextTopic = () => {
+    if (!nextTopic) return;
+    if (activeSeries === 'alan-2026') {
+      handleSelectAlanTopic(nextTopic.id);
+    } else {
+      handleSelectWfTopic(nextTopic.id);
     }
   };
 
   return (
     <div className="podcast-contrast-theme animate-fade-in" ref={contentRef}>
-      {/* 顶部做题对照式导航容器 */}
+      {/* 顶部极简路径级联工作台导航栏 */}
       <header className="contrast-topbar-container">
         <div className="contrast-cascade-bar">
           {/* 左侧：级联路径导航（人物 / 系列 / 章节） */}
@@ -699,7 +542,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                 type="button"
                 className={`contrast-series-chip ${activeSeries === 'alan-2026' ? 'active' : ''}`}
                 onClick={() => handleSwitchSeries('alan-2026')}
-                title={`2026 艾伦访谈 · 已读 ${alanStats.completed}/${alanStats.total} 专题`}
+                title={`2026 艾伦长访谈 · 已读 ${alanStats.completed}/${alanStats.total} 专题`}
               >
                 <Sparkles size={12} className="text-amber-400" />
                 <span>艾伦长访谈</span>
@@ -709,7 +552,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                 type="button"
                 className={`contrast-series-chip ${activeSeries === 'wealth-freedom-154' ? 'active' : ''}`}
                 onClick={() => handleSwitchSeries('wealth-freedom-154')}
-                title={`财富自由之路 · 已读 ${classicStats.completed}/${classicStats.total} 篇`}
+                title={`财富自由之路 · 已读 ${classicStats.completed}/${classicStats.total} 专题`}
               >
                 <Headphones size={12} />
                 <span>财富自由之路</span>
@@ -725,13 +568,13 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                 type="button"
                 className={`contrast-ctrl-btn episode-selector-btn ${isCatalogOpen ? 'active' : ''}`}
                 onClick={() => setIsCatalogOpen(!isCatalogOpen)}
-                title={activeSeries === 'alan-2026' ? '浏览与切换 7 个睡前专题' : '浏览与切换 154 篇逐字稿章节'}
+                title={activeSeries === 'alan-2026' ? '浏览与切换 7 个精读专题' : '浏览与切换 167 个精读专题'}
               >
                 <BookOpen size={13} className="text-amber-400" />
                 <span className="contrast-btn-ep-title">
                   {activeSeries === 'alan-2026'
                     ? `专题 0${activeTopic.id} ${activeTopic.title}`
-                    : `#${activeEpisode.id} ${activeEpisode.title}`}
+                    : `#${activeTopic.episodeNo} ${activeTopic.title}`}
                 </span>
                 <span className="contrast-down-arrow">{isCatalogOpen ? '▲' : '▾'}</span>
               </button>
@@ -743,7 +586,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                     <span className="contrast-dd-title">
                       {activeSeries === 'alan-2026'
                         ? `选读专题（已过 ${alanStats.completed}/${alanStats.total}）`
-                        : `选读章节（已过 ${classicStats.completed}/${classicStats.total}）`}
+                        : `选读专题（已过 ${classicStats.completed}/${classicStats.total}）`}
                     </span>
                     <button
                       type="button"
@@ -759,7 +602,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                     <Search size={13} className="text-amber-400" />
                     <input
                       type="text"
-                      placeholder={activeSeries === 'alan-2026' ? '搜索专题名称、核心命题...' : '搜索章节编号、主题...'}
+                      placeholder={activeSeries === 'alan-2026' ? '搜索专题名称、核心命题...' : '搜索专题、期号、命题...'}
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
                       className="contrast-dd-search-input"
@@ -776,7 +619,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                     )}
                   </div>
 
-                  {/* 154篇模式下的栏目横向筛选条 */}
+                  {/* 财富自由之路模式下的单元横向筛选条 */}
                   {activeSeries === 'wealth-freedom-154' && (
                     <div className="contrast-dd-columns-bar">
                       {columnsList.map(col => (
@@ -795,14 +638,14 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                   {/* 章节/专题列表流 */}
                   <div className="contrast-dd-list">
                     {activeSeries === 'alan-2026' ? (
-                      filteredTopics.map(t => {
-                        const isSelected = t.id === activeTopicId;
+                      filteredAlanTopics.map(t => {
+                        const isSelected = t.id === activeAlanTopicId;
                         const isRead = readEpisodeIds.includes(`alan-${t.id}`);
                         return (
                           <div
                             key={t.id}
                             className={`contrast-dd-item ${isSelected ? 'selected' : ''} ${isRead ? 'is-read' : ''}`}
-                            onClick={() => handleSelectTopic(t.id)}
+                            onClick={() => handleSelectAlanTopic(t.id)}
                           >
                             <span className="contrast-dd-item-num">0{t.id}</span>
                             <div className="contrast-dd-item-info">
@@ -814,22 +657,22 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                         );
                       })
                     ) : (
-                      filteredEpisodes.map(ep => {
-                        const isSelected = ep.id === activeEpisodeId;
-                        const isRead = readEpisodeIds.includes(ep.id);
+                      filteredWfTopics.map(t => {
+                        const isSelected = t.id === activeWfTopicId;
+                        const isRead = readEpisodeIds.includes(`wf-${t.id}`);
                         return (
                           <div
-                            key={ep.id}
+                            key={t.id}
                             className={`contrast-dd-item ${isSelected ? 'selected' : ''} ${isRead ? 'is-read' : ''}`}
-                            onClick={() => handleSelectEpisode(ep.id)}
+                            onClick={() => handleSelectWfTopic(t.id)}
                           >
-                            <span className="contrast-dd-item-num">#{ep.id}</span>
+                            <span className="contrast-dd-item-num">#{t.episodeNo}</span>
                             <div className="contrast-dd-item-info">
-                              <span className="contrast-dd-item-title">{ep.title}</span>
-                              <div className="contrast-dd-item-meta">
-                                {ep.column && <span className="contrast-dd-item-tag">{ep.column}</span>}
-                                <span>{ep.readTimeMinutes || 3} 分钟</span>
+                              <div className="contrast-dd-item-name-row">
+                                <span className="contrast-dd-item-title">{t.title}</span>
+                                <span className="contrast-dd-item-tag">{t.unit}</span>
                               </div>
+                              <span className="contrast-dd-item-core">{t.core}</span>
                             </div>
                             {isRead && <span className="contrast-dd-read">✓ 已过</span>}
                           </div>
@@ -899,268 +742,260 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
             {/* 标为已读 */}
             <button
               type="button"
-              className={`contrast-ctrl-btn ${readEpisodeIds.includes(activeSeries === 'alan-2026' ? `alan-${activeTopic.id}` : activeEpisode.id) ? 'is-read' : ''}`}
-              onClick={() => toggleMarkRead(activeSeries === 'alan-2026' ? `alan-${activeTopic.id}` : activeEpisode.id)}
+              className={`contrast-ctrl-btn ${isCurrentRead ? 'is-read' : ''}`}
+              onClick={() => toggleMarkRead(currentEpisodeKey)}
               title="标记为今晚已读完"
             >
               <CheckCircle2 size={13} />
-              <span>{readEpisodeIds.includes(activeSeries === 'alan-2026' ? `alan-${activeTopic.id}` : activeEpisode.id) ? '已过' : '打卡'}</span>
+              <span>{isCurrentRead ? '已过' : '打卡'}</span>
             </button>
 
-            {/* 上一篇/下一篇 */}
-            {activeSeries === 'alan-2026' ? (
-              <div className="contrast-nav-pair">
-                <button
-                  type="button"
-                  className="contrast-ctrl-btn nav-btn"
-                  disabled={!prevTopic}
-                  onClick={() => prevTopic && handleSelectTopic(prevTopic.id)}
-                  title="上一个专题"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-                <button
-                  type="button"
-                  className="contrast-ctrl-btn nav-btn"
-                  disabled={!nextTopic}
-                  onClick={() => nextTopic && handleSelectTopic(nextTopic.id)}
-                  title="下一个专题"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            ) : (
-              <div className="contrast-nav-pair">
-                <button
-                  type="button"
-                  className="contrast-ctrl-btn nav-btn"
-                  disabled={!prevClassicEpisode}
-                  onClick={() => prevClassicEpisode && handleSelectEpisode(prevClassicEpisode.id)}
-                  title="上一篇"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-                <button
-                  type="button"
-                  className="contrast-ctrl-btn nav-btn"
-                  disabled={!nextClassicEpisode}
-                  onClick={() => nextClassicEpisode && handleSelectEpisode(nextClassicEpisode.id)}
-                  title="下一篇"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            )}
+            {/* 顶部小型上一篇/下一篇导航 */}
+            <div className="contrast-nav-pair">
+              <button
+                type="button"
+                className="contrast-ctrl-btn nav-btn"
+                disabled={!prevTopic}
+                onClick={handleGotoPrevTopic}
+                title="上一个专题"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                type="button"
+                className="contrast-ctrl-btn nav-btn"
+                disabled={!nextTopic}
+                onClick={handleGotoNextTopic}
+                title="下一个专题"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* 2026 艾伦访谈专属专题介绍卡片 */}
-      {activeSeries === 'alan-2026' && activeTopic && (
-        <div className="contrast-topic-hero">
-          <div className="contrast-topic-hero-header">
-            <span className="contrast-topic-hero-badge">
-              专题 0{activeTopic.id} ｜ 原访谈约 {activeTopic.time_start} – {activeTopic.time_end}
-            </span>
-            <span className="contrast-topic-hero-speaker">🎙️ 孙宇晨 × 邵艾伦</span>
-          </div>
-          <h2 className="contrast-topic-hero-title">{activeTopic.title}</h2>
-          <div className="contrast-topic-hero-core">
-            <span className="contrast-topic-core-label">一句话命题：</span>
-            <span className="contrast-topic-core-text">{activeTopic.core}</span>
-          </div>
+      {/* 专题介绍 Hero 卡片 */}
+      <section className="contrast-topic-hero animate-fade-in">
+        <div className="contrast-topic-hero-header">
+          <span className="contrast-topic-badge">
+            {activeSeries === 'alan-2026'
+              ? `深度长访谈 · 专题 0${activeTopic.id}`
+              : `财富自由精读 · 第 ${activeTopic.episodeNo} 期 · ${activeTopic.unit}`}
+          </span>
+          <span className="contrast-topic-time">
+            {activeSeries === 'alan-2026'
+              ? `约 ${activeTopic.time_start} - ${activeTopic.time_end}`
+              : `收录 ${(activeTopic.segments || []).length} 个核心切片`}
+          </span>
+        </div>
+        <h2 className="contrast-topic-title">{activeTopic.title}</h2>
+        <p className="contrast-topic-core">
+          <strong>一句话核心命题：</strong>
+          {activeTopic.core}
+        </p>
+      </section>
+
+      {/* 切片快速单选过滤胶囊 */}
+      {currentSlices.length > 1 && (
+        <div className="contrast-slice-filter-bar">
+          <button
+            type="button"
+            className={`contrast-slice-filter-pill ${activeSliceIdx === 0 ? 'active' : ''}`}
+            onClick={() => setActiveSliceIdx(0)}
+          >
+            全部切片流 ({currentSlices.length})
+          </button>
+          {currentSlices.map((slice, idx) => (
+            <button
+              key={slice.id}
+              type="button"
+              className={`contrast-slice-filter-pill ${activeSliceIdx === idx + 1 ? 'active' : ''}`}
+              onClick={() => setActiveSliceIdx(idx + 1)}
+            >
+              切片 0{idx + 1}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* 认知降温初衷提示 */}
-      <div className="contrast-mindset-banner">
-        <Moon size={14} className="text-amber-400 flex-shrink-0" />
-        <span className="contrast-mindset-text">
-          深夜睡不着时，看未知的新东西会激发多巴胺导致兴奋；听过、熟悉、不带压迫感的内容是最好的“思维滑梯”——平复心率与脑电波，自然产生睡意。
-        </span>
-      </div>
-
-      {/* 主展示区：左侧相关原文 + 右侧核心论点剖析与随笔笔记 */}
+      {/* 主阅读视区 */}
       {viewMode === 'contrast' ? (
-        <main className={`contrast-main-container font-size-${fontSize}`}>
-          {isLoadingContent ? (
-            <div className="contrast-loading-box">
-              <Moon size={24} className="animate-spin text-amber-500" />
-              <p>正在舒缓翻开对照手札...</p>
-            </div>
+        /* 双栏对照精读模式 */
+        <main className={`contrast-split-container font-size-${fontSize}`}>
+          {currentSlices.length === 0 ? (
+            <div className="contrast-loading-box"><p>该专题暂无切片内容</p></div>
           ) : (
-            displayedSlices.map(slice => {
-              const noteObj = sliceNotes[slice.sliceKey];
-              const isEditingThis = editingNoteSliceKey === slice.sliceKey;
-              const isCopied = copiedKey === slice.sliceKey;
+            currentSlices.map((slice, sIdx) => {
+              if (activeSliceIdx !== 0 && activeSliceIdx !== sIdx + 1) return null;
+              const noteData = sliceNotes[slice.sliceKey];
 
               return (
-                <div key={slice.sliceKey} className="contrast-dual-pair">
-                  {/* ====== 【左栏】：对照相关原文（先读原文输入） ====== */}
+                <div key={slice.sliceKey} className="contrast-split-row animate-fade-in">
+                  {/* ====== 【左栏：相关原话与出处】 ====== */}
                   <section className="contrast-pane contrast-pane-left">
                     <div className="contrast-slice-tag-row">
-                      <span className="contrast-left-header-label">
-                        {activeSeries === 'alan-2026'
-                          ? '对照相关原声 · 🎙️ 孙宇晨（对话邵艾伦）'
-                          : '对照相关原文 · 🎙️ 孙宇晨'}
-                      </span>
+                      <span className="contrast-left-header-label">{slice.timeBadge}</span>
                     </div>
 
-                    {/* 引子提示 */}
-                    {slice.lead && (
-                      <div className="contrast-quote-lead">
-                        <span>💬 {slice.lead}</span>
-                      </div>
-                    )}
-
-                    {/* 原文长引用段落 */}
                     <div className="contrast-original-quote-body">
-                      {slice.originalQuote.split('\n\n').map((para, pIdx) => (
-                        <p key={pIdx} className="contrast-quote-p">
-                          {para}
+                      {slice.lead && (
+                        <p className="contrast-lead-p">
+                          <em>{slice.lead}</em>
+                        </p>
+                      )}
+                      {slice.originalQuoteList.map((q, qIdx) => (
+                        <p key={qIdx} className="contrast-quote-p">
+                          {q}
                         </p>
                       ))}
+                      {slice.note && (
+                        <p className="contrast-note-p">
+                          <small>注：{slice.note}</small>
+                        </p>
+                      )}
                     </div>
 
-                    {/* 原文片段定位卡片 */}
                     <div className="contrast-source-card">
                       <div className="contrast-source-meta">
                         <span className="contrast-source-badge">
-                          {slice.timeBadge}
+                          {activeSeries === 'alan-2026' ? '访谈出处' : '讲稿出处'}
                         </span>
-                        <button
-                          type="button"
-                          className="contrast-btn-goto-full"
-                          onClick={() => setViewMode('full')}
-                          title="切换到全篇通读看完整上下文"
-                        >
-                          到原文看这一段 →
-                        </button>
+                        <span className="contrast-source-ep-title">
+                          {slice.sourceHint}
+                        </span>
                       </div>
-                      <p className="contrast-source-hint">
-                        {slice.sourceHint}
-                      </p>
                     </div>
                   </section>
 
-                  {/* ====== 【右栏】：核心论点剖析 + 骨架拆解 + 随笔笔记 ====== */}
+                  {/* 中间自适应虚线分隔装饰 */}
+                  <div className="contrast-pane-divider" aria-hidden="true" />
+
+                  {/* ====== 【右栏：思维骨架与深度笔记】 ====== */}
                   <section className="contrast-pane contrast-pane-right">
-                    {/* 切片标识 */}
                     <div className="contrast-slice-tag-row">
                       <span className="contrast-slice-q-tag">{slice.tag}</span>
                     </div>
 
-                    {/* 大号核心命题 */}
-                    <h2 className="contrast-main-assertion">{slice.title}</h2>
-                    {slice.assertion && slice.assertion !== slice.title && (
-                      <p className="contrast-sub-assertion">{slice.assertion}</p>
-                    )}
+                    {/* 命题 */}
+                    <h3 className="contrast-assertion-title">
+                      {slice.title}
+                    </h3>
 
-                    {/* 先抓骨架胶囊 */}
-                    <div className="contrast-bone-capsule">
-                      <span>{slice.bone}</span>
+                    {/* 思维骨架推演 */}
+                    <div className="contrast-bone-box">
+                      <span className="contrast-bone-label">{slice.bone}</span>
+                      <ul className="contrast-skeleton-list">
+                        {slice.skeletonList.map((boneItem, bIdx) => (
+                          <li key={bIdx} className="contrast-skeleton-item">
+                            <span className="contrast-skeleton-bullet">›</span>
+                            <span>{boneItem}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
 
-                    {/* 逐块拆解 / 骨架推演链条 */}
-                    <div className="contrast-breakdown-box">
-                      <div className="contrast-breakdown-title">
-                        <span>▶ 逻辑推演链条与认知骨架</span>
-                      </div>
-                      {slice.skeletonList && slice.skeletonList.length > 0 ? (
-                        <div className="contrast-skeleton-steplist">
-                          {slice.skeletonList.map((step, sIdx) => (
-                            <div key={sIdx} className="contrast-skeleton-step-item">
-                              <span className="contrast-skeleton-step-num">{sIdx + 1}</span>
-                              <span className="contrast-skeleton-step-text">{step}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    {/* 金句提炼 Hook */}
+                    {/* 记忆钩子 / 金句卡片 */}
                     {slice.hook && (
-                      <div className="contrast-hook-quote">
-                        <Sparkles size={13} className="text-amber-400 flex-shrink-0" />
-                        <span>{slice.hook}</span>
+                      <div className="contrast-hook-card">
+                        <p className="contrast-hook-text">
+                          <strong>认知重点 · </strong>
+                          {slice.hook}
+                        </p>
                       </div>
                     )}
 
-                    {/* 深度思考与随笔记录卡片（右侧核心笔记区） */}
-                    <div className="contrast-reflection-card">
-                      <div className="contrast-ref-header">
-                        <span className="contrast-ref-title">
+                    {/* 随笔笔记与卡片动作 */}
+                    <div className="contrast-notes-section">
+                      <div className="contrast-notes-header">
+                        <div className="contrast-notes-title-row">
                           <PenLine size={13} className="text-amber-400" />
-                          <span>深度思考与随笔记录</span>
-                        </span>
-                        <div className="contrast-ref-actions">
+                          <span className="contrast-notes-label">深度思考与随笔记录</span>
+                        </div>
+                        <div className="contrast-notes-actions">
                           <button
                             type="button"
-                            className="contrast-ref-btn"
+                            className="contrast-action-text-btn"
                             onClick={() => {
-                              if (isEditingThis) {
-                                setEditingNoteSliceKey(null);
-                              } else {
-                                setEditingNoteSliceKey(slice.sliceKey);
-                                setNoteDraftText(noteObj?.text || '');
-                              }
+                              setActiveNoteSliceKey(slice.sliceKey);
+                              setNoteDraftText(noteData ? noteData.text : '');
                             }}
                           >
                             <PenLine size={12} />
-                            <span>{noteObj?.text ? '修改笔记' : '记一笔'}</span>
+                            <span>{noteData ? '修改笔记' : '记一笔'}</span>
                           </button>
                           <button
                             type="button"
-                            className="contrast-ref-btn"
-                            onClick={() => handleCopySliceCard(slice)}
-                            title="复制本组对照卡片为 Markdown"
+                            className="contrast-action-text-btn"
+                            onClick={() => handleCopySkeleton(slice)}
+                            title="复制骨架推演为卡片引用"
                           >
-                            {isCopied ? <Check size={12} className="text-amber-400" /> : <Copy size={12} />}
-                            <span>{isCopied ? '已复制' : '复制卡片'}</span>
+                            {copiedKey === slice.sliceKey ? (
+                              <>
+                                <Check size={12} className="text-emerald-400" />
+                                <span className="text-emerald-400">已复制</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={12} />
+                                <span>复制卡片</span>
+                              </>
+                            )}
                           </button>
                         </div>
                       </div>
 
-                      {/* 编辑态输入框 */}
-                      {isEditingThis ? (
-                        <div className="contrast-note-editor-wrap">
+                      {/* 编辑草稿输入框 */}
+                      {activeNoteSliceKey === slice.sliceKey && (
+                        <div className="contrast-note-editor animate-scale-up">
                           <textarea
                             className="contrast-note-textarea"
-                            rows="3"
-                            placeholder="写下你对左侧原话的思考、共鸣或实践迁移..."
+                            placeholder="写下你针对这个论点的顿悟、联想或行动方案..."
+                            rows={3}
                             value={noteDraftText}
                             onChange={e => setNoteDraftText(e.target.value)}
                             autoFocus
                           />
-                          <div className="contrast-note-editor-btns">
+                          <div className="contrast-editor-btns">
                             <button
                               type="button"
-                              className="contrast-note-btn save"
-                              onClick={() => handleSaveSliceNote(slice.sliceKey)}
-                            >
-                              <Send size={12} />
-                              <span>保存随笔</span>
-                            </button>
-                            <button
-                              type="button"
-                              className="contrast-note-btn cancel"
-                              onClick={() => setEditingNoteSliceKey(null)}
+                              className="contrast-btn-secondary"
+                              onClick={() => {
+                                setActiveNoteSliceKey(null);
+                                setNoteDraftText('');
+                              }}
                             >
                               取消
                             </button>
+                            <button
+                              type="button"
+                              className="contrast-btn-primary"
+                              onClick={() => handleSaveSliceNote(slice.sliceKey)}
+                            >
+                              <Send size={12} />
+                              <span>保存此段沉淀</span>
+                            </button>
                           </div>
                         </div>
-                      ) : noteObj?.text ? (
-                        <div className="contrast-user-note-body">
-                          <p className="contrast-user-note-p">{noteObj.text}</p>
-                          <span className="contrast-user-note-time">记录于 {noteObj.updatedAt}</span>
-                        </div>
-                      ) : (
-                        <div className="contrast-note-default-tip">
-                          <p className="contrast-vocabulary-hint">
-                            <strong>认知重点 · </strong>
-                            {slice.hook || '把精力集中在根本战略上，不要用战术忙碌掩盖懒惰；在熟悉语境中平复焦虑，安稳入眠。'}
-                          </p>
+                      )}
+
+                      {/* 已保存的笔记卡片 */}
+                      {noteData && (
+                        <div className="contrast-saved-note-card animate-fade-in">
+                          <p className="contrast-saved-note-text">{noteData.text}</p>
+                          <div className="contrast-saved-note-footer">
+                            <span className="contrast-note-time">
+                              记录于 {noteData.updatedAt}
+                            </span>
+                            <button
+                              type="button"
+                              className="contrast-btn-delete-note"
+                              onClick={() => handleDeleteSliceNote(slice.sliceKey)}
+                              title="删除此条笔记"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1170,17 +1005,21 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
             })
           )}
 
-          {/* 2026 艾伦访谈专题睡前收束语 */}
-          {activeSeries === 'alan-2026' && activeTopic.closing && activeTopic.closing.length > 0 && (
-            <div className="contrast-closing-card">
+          {/* 专题睡前收束语 */}
+          {activeTopic.closing && (
+            <div className="contrast-closing-card animate-fade-in">
               <div className="contrast-closing-icon">
                 <Moon size={22} className="text-amber-400" />
               </div>
               <h3 className="contrast-closing-title">今晚收束 · 心智归位</h3>
               <div className="contrast-closing-body">
-                {activeTopic.closing.map((c, cIdx) => (
-                  <p key={cIdx} className="contrast-closing-p">{c}</p>
-                ))}
+                {Array.isArray(activeTopic.closing) ? (
+                  activeTopic.closing.map((c, cIdx) => (
+                    <p key={cIdx} className="contrast-closing-p">{c}</p>
+                  ))
+                ) : (
+                  <p className="contrast-closing-p">{activeTopic.closing}</p>
+                )}
               </div>
             </div>
           )}
@@ -1188,110 +1027,66 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       ) : (
         /* 全篇长文通读模式 */
         <main className={`contrast-full-reader font-size-${fontSize}`}>
-          {isLoadingContent ? (
-            <div className="contrast-loading-box"><p>正在翻开逐字稿...</p></div>
-          ) : (
-            <div className="contrast-full-article-wrap">
-              <div className="contrast-full-header">
-                <span className="contrast-full-ep-id">
-                  {activeSeries === 'alan-2026'
-                    ? `专题 0${activeTopic.id} ｜ 原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end}`
-                    : `第 ${activeEpisode.id} 篇 · ${activeEpisode.column}`}
-                </span>
-                <h2 className="contrast-full-h1">
-                  {activeSeries === 'alan-2026'
-                    ? `${activeTopic.title} ｜ 孙宇晨 × 邵艾伦`
-                    : activeEpisode.fullTitle}
-                </h2>
-                <div className="contrast-full-meta">
-                  {activeSeries === 'alan-2026' ? (
-                    <span>核心命题：{activeTopic.core}</span>
-                  ) : (
-                    <>
-                      <span>{activeEpisode.wordCount} 字</span>
-                      <span>·</span>
-                      <span>约 {activeEpisode.readTimeMinutes} 分钟</span>
-                    </>
-                  )}
-                </div>
+          <div className="contrast-full-article-wrap">
+            <div className="contrast-full-header">
+              <span className="contrast-full-ep-id">
+                {activeSeries === 'alan-2026'
+                  ? `专题 0${activeTopic.id} ｜ 原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end}`
+                  : `第 ${activeTopic.episodeNo} 期 · ${activeTopic.unit}`}
+              </span>
+              <h2 className="contrast-full-h1">
+                {activeTopic.title}
+              </h2>
+              <div className="contrast-full-meta">
+                <span>核心命题：{activeTopic.core}</span>
               </div>
-
-              {activeSeries === 'wealth-freedom-154' ? (
-                <TranscriptAnnotations key={activeEpisode.id} episode={activeEpisode} html={formattedFullHtml} fontSize={fontSize} />
-              ) : (
-                <div
-                  className="podcast-article-content"
-                  dangerouslySetInnerHTML={{ __html: formattedFullHtml }}
-                />
-              )}
             </div>
-          )}
+
+            <div
+              className="podcast-article-content"
+              dangerouslySetInnerHTML={{ __html: formattedFullHtml }}
+            />
+          </div>
         </main>
       )}
 
       {/* 底部翻页控制卡片 */}
       <footer className="contrast-footer-row">
-        {activeSeries === 'alan-2026' ? (
-          <>
-            {prevTopic ? (
-              <button
-                type="button"
-                className="contrast-footer-nav-card prev"
-                onClick={() => handleSelectTopic(prevTopic.id)}
-              >
-                <div className="contrast-footer-nav-dir">
-                  <ChevronLeft size={14} />
-                  <span>上一个专题</span>
-                </div>
-                <div className="contrast-footer-nav-title">专题 0{prevTopic.id} · {prevTopic.title}</div>
-              </button>
-            ) : <div />}
+        {prevTopic ? (
+          <button
+            type="button"
+            className="contrast-footer-nav-card prev"
+            onClick={handleGotoPrevTopic}
+          >
+            <div className="contrast-footer-nav-dir">
+              <ChevronLeft size={14} />
+              <span>上一个专题</span>
+            </div>
+            <div className="contrast-footer-nav-title">
+              {activeSeries === 'alan-2026'
+                ? `专题 0${prevTopic.id} · ${prevTopic.title}`
+                : `#${prevTopic.episodeNo} ${prevTopic.title}`}
+            </div>
+          </button>
+        ) : <div />}
 
-            {nextTopic ? (
-              <button
-                type="button"
-                className="contrast-footer-nav-card next"
-                onClick={() => handleSelectTopic(nextTopic.id)}
-              >
-                <div className="contrast-footer-nav-dir">
-                  <span>下一个专题</span>
-                  <ChevronRight size={14} />
-                </div>
-                <div className="contrast-footer-nav-title">专题 0{nextTopic.id} · {nextTopic.title}</div>
-              </button>
-            ) : <div />}
-          </>
-        ) : (
-          <>
-            {prevClassicEpisode ? (
-              <button
-                type="button"
-                className="contrast-footer-nav-card prev"
-                onClick={() => handleSelectEpisode(prevClassicEpisode.id)}
-              >
-                <div className="contrast-footer-nav-dir">
-                  <ChevronLeft size={14} />
-                  <span>上一篇</span>
-                </div>
-                <div className="contrast-footer-nav-title">#{prevClassicEpisode.id} {prevClassicEpisode.title}</div>
-              </button>
-            ) : <div />}
-
-            {nextClassicEpisode ? (
-              <button
-                type="button"
-                className="contrast-footer-nav-card next"
-                onClick={() => handleSelectEpisode(nextClassicEpisode.id)}
-              >
-                <div className="contrast-footer-nav-dir">
-                  <span>下一篇</span>
-                  <ChevronRight size={14} />
-                </div>
-                <div className="contrast-footer-nav-title">#{nextClassicEpisode.id} {nextClassicEpisode.title}</div>
-              </button>
-            ) : <div />}
-          </>
-        )}
+        {nextTopic ? (
+          <button
+            type="button"
+            className="contrast-footer-nav-card next"
+            onClick={handleGotoNextTopic}
+          >
+            <div className="contrast-footer-nav-dir">
+              <span>下一个专题</span>
+              <ChevronRight size={14} />
+            </div>
+            <div className="contrast-footer-nav-title">
+              {activeSeries === 'alan-2026'
+                ? `专题 0${nextTopic.id} · ${nextTopic.title}`
+                : `#${nextTopic.episodeNo} ${nextTopic.title}`}
+            </div>
+          </button>
+        ) : <div />}
       </footer>
 
       {/* 放在上一个选题和下一个选题正下方的极简打卡落款 */}
