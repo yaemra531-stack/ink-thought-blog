@@ -6979,160 +6979,55 @@
 }
 
 /* ==========================================================================
-   底部读毕打卡与顺畅连读区域 (Bottom Completion & Check-in Hero Bar)
+   放在上一个选题和下一个选题下方的极简打卡落款
    ========================================================================== */
-.contrast-bottom-checkin-card {
-  margin-top: 3rem;
-  margin-bottom: 2rem;
-  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.12) 0%, rgba(20, 18, 15, 0.7) 100%);
-  border: 1px solid rgba(var(--accent-rgb), 0.3);
-  border-radius: 12px;
-  padding: 1.5rem 1.85rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-}
-
-.contrast-bottom-checkin-inner {
+.contrast-footer-checkin-wrap {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.contrast-bottom-checkin-status {
-  display: flex;
-  align-items: center;
-  gap: 1.1rem;
-}
-
-.contrast-checkin-status-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  background: rgba(var(--accent-rgb), 0.15);
-  color: var(--accent-primary);
-  border: 1px solid rgba(var(--accent-rgb), 0.3);
-  flex-shrink: 0;
-  transition: all var(--transition-fast);
-}
-
-.contrast-checkin-status-icon.done {
-  background: rgba(16, 185, 129, 0.16);
-  color: #10B981;
-  border-color: rgba(16, 185, 129, 0.4);
-}
-
-.contrast-checkin-status-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.contrast-checkin-h4 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-}
-
-.contrast-checkin-p {
-  margin: 0;
-  font-size: 0.84rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.contrast-bottom-checkin-actions {
-  display: flex;
   align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  margin-top: 1.75rem;
+  margin-bottom: 2.5rem;
 }
 
-/* 底部核心打卡按钮 */
-.contrast-bottom-checkin-btn {
+.contrast-footer-checkin-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 1.15rem;
-  border-radius: 8px;
-  font-size: 0.88rem;
+  gap: 0.55rem;
+  padding: 0.48rem 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
   font-weight: 600;
-  background: rgba(var(--accent-rgb), 0.2);
-  border: 1px solid var(--accent-primary);
-  color: var(--accent-primary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  user-select: none;
-}
-
-.contrast-bottom-checkin-btn:hover {
-  background: var(--accent-primary);
-  color: #12100e;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3);
-}
-
-.contrast-bottom-checkin-btn.is-read {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.4);
-  color: #10B981;
-}
-
-.contrast-bottom-checkin-btn.is-read:hover {
-  background: rgba(16, 185, 129, 0.25);
-  color: #10B981;
-}
-
-/* 一键打卡并顺畅读下一篇连读按钮 */
-.contrast-bottom-next-flow-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.55rem 1.15rem;
-  border-radius: 8px;
-  font-size: 0.88rem;
-  font-weight: 600;
-  background: var(--bg-secondary);
+  background: rgba(var(--accent-rgb), 0.08);
   border: 1px solid rgba(var(--accent-rgb), 0.25);
-  color: var(--text-secondary);
+  color: var(--accent-primary);
   cursor: pointer;
   transition: all var(--transition-fast);
   user-select: none;
 }
 
-.contrast-bottom-next-flow-btn:hover {
+.contrast-footer-checkin-btn:hover {
+  background: rgba(var(--accent-rgb), 0.16);
   border-color: var(--accent-primary);
   color: var(--text-primary);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.2);
 }
 
-.contrast-bottom-next-flow-btn.highlight {
-  background: rgba(var(--accent-rgb), 0.12);
-  border-color: rgba(var(--accent-rgb), 0.35);
-  color: var(--accent-primary);
+.contrast-footer-checkin-btn.is-read {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #10B981;
 }
 
-.contrast-bottom-next-flow-btn.highlight:hover {
-  background: rgba(var(--accent-rgb), 0.25);
-  color: var(--text-primary);
+.contrast-footer-checkin-btn.is-read:hover {
+  background: rgba(16, 185, 129, 0.2);
 }
 
-@media (max-width: 640px) {
-  .contrast-bottom-checkin-inner {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .contrast-bottom-checkin-actions {
-    width: 100%;
-  }
-  .contrast-bottom-checkin-btn,
-  .contrast-bottom-next-flow-btn {
-    flex: 1;
-    justify-content: center;
-  }
+.contrast-footer-checkin-tag {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
 }

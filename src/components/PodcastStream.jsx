@@ -1229,53 +1229,6 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
         </main>
       )}
 
-      {/* 底部读毕打卡与仪式感收束区域 */}
-      <div className="contrast-bottom-checkin-card animate-fade-in">
-        <div className="contrast-bottom-checkin-inner">
-          <div className="contrast-bottom-checkin-status">
-            <div className={`contrast-checkin-status-icon ${isCurrentRead ? 'done' : ''}`}>
-              <CheckCircle2 size={22} />
-            </div>
-            <div className="contrast-checkin-status-text">
-              <h4 className="contrast-checkin-h4">
-                {isCurrentRead ? '本篇研读已打卡 · 心智归位' : '本篇研读已收束？'}
-              </h4>
-              <p className="contrast-checkin-p">
-                {isCurrentRead
-                  ? `已归档入库 ｜ ${activeSeries === 'alan-2026' ? '艾伦长访谈' : '财富自由之路'}当前已过 ${currentStats.completed}/${currentStats.total} ${currentUnit} (${currentStats.percent}%)`
-                  : `点击打卡见证微小推进 ｜ 进度将推进至 ${Math.min(currentStats.completed + 1, currentStats.total)}/${currentStats.total} ${currentUnit}`}
-              </p>
-            </div>
-          </div>
-
-          <div className="contrast-bottom-checkin-actions">
-            {/* 核心打卡状态按钮 */}
-            <button
-              type="button"
-              className={`contrast-bottom-checkin-btn ${isCurrentRead ? 'is-read' : ''}`}
-              onClick={() => toggleMarkRead(currentEpisodeKey)}
-              title={isCurrentRead ? '已打卡（点击取消）' : '点击打卡标记本篇已读'}
-            >
-              <CheckCircle2 size={16} />
-              <span>{isCurrentRead ? '✓ 已打卡完成' : '读完打卡'}</span>
-            </button>
-
-            {/* 未打卡时且有下一篇，提供一键「打卡并读下一篇」顺滑动作 */}
-            {hasNextItem && (
-              <button
-                type="button"
-                className={`contrast-bottom-next-flow-btn ${!isCurrentRead ? 'highlight' : ''}`}
-                onClick={handleCheckinAndNext}
-                title="打卡并通过平滑进入下一篇"
-              >
-                <span>{!isCurrentRead ? '打卡并读下一篇' : '直接读下一篇'}</span>
-                <ChevronRight size={15} />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* 底部翻页控制卡片 */}
       <footer className="contrast-footer-row">
         {activeSeries === 'alan-2026' ? (
@@ -1340,6 +1293,22 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
           </>
         )}
       </footer>
+
+      {/* 放在上一个选题和下一个选题正下方的极简打卡落款 */}
+      <div className="contrast-footer-checkin-wrap animate-fade-in">
+        <button
+          type="button"
+          className={`contrast-footer-checkin-btn ${isCurrentRead ? 'is-read' : ''}`}
+          onClick={() => toggleMarkRead(currentEpisodeKey)}
+          title={isCurrentRead ? '本篇已打卡（点击取消）' : '点击打卡记录今日推进'}
+        >
+          <CheckCircle2 size={15} />
+          <span>{isCurrentRead ? '✓ 本篇已打卡 · 心智归位' : '读毕打卡 · 记录今日推进'}</span>
+          <span className="contrast-footer-checkin-tag">
+            {currentStats.completed}/{currentStats.total} {currentUnit}
+          </span>
+        </button>
+      </div>
     </div>
   );
 }
