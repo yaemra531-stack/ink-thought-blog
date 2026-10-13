@@ -5,6 +5,7 @@ import PostCard from './components/PostCard';
 import ArticleDetail from './components/ArticleDetail';
 import ThoughtsStream from './components/ThoughtsStream';
 import FitnessStream from './components/FitnessStream';
+import PodcastStream from './components/PodcastStream';
 import AboutSection from './components/AboutSection';
 import ReferenceSection from './components/ReferenceSection';
 import SearchModal from './components/SearchModal';
@@ -285,6 +286,13 @@ export default function App() {
 
             {activeTab === 'fitness' && (
               <FitnessStream
+                isAuthor={isAuthor}
+                onToggleAuthorMode={handleToggleAuthorMode}
+              />
+            )}
+
+            {activeTab === 'podcast' && (
+              <PodcastStream
                 isAuthor={isAuthor}
                 onToggleAuthorMode={handleToggleAuthorMode}
               />
