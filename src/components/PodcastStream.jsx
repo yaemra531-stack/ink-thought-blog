@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import alanInterview from '../content/alanInterview.json';
 import wealthFreedomRaw from '../content/wealthFreedomCurated.json';
+import zuckWangInterview from '../content/zuckWangInterview.json';
 import { renderMarkdown } from '../utils/markdownParser';
 
 const FONT_SIZES = ['sm', 'base', 'lg', 'xl'];
@@ -54,9 +55,9 @@ const AVAILABLE_FIGURES = [
     name: 'Alex Wang',
     avatar: '⚡',
     title: 'Scale AI 创始人兼 CEO',
-    desc: '数据基础设施演进、AI 生态与青年创业实录',
-    countBadge: '筹备中',
-    active: false,
+    desc: '扎克伯格 × Alexandr Wang 对话，千亿美元 AI 赌注与 Muse 模型精读',
+    countBadge: '7 篇收录',
+    active: true,
   },
   {
     id: 'sam-altman',
@@ -119,6 +120,15 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     return 2; // 默认停在第 006 期创刊词「先给自己做战略」
   });
 
+  // 扎克伯格 × Alexandr Wang 访谈当前专题 ID（1 - 7）
+  const [activeMuseTopicId, setActiveMuseTopicId] = useState(() => {
+    try {
+      const saved = parseInt(localStorage.getItem('ink_muse_last_topic'), 10);
+      if (saved >= 1 && saved <= zuckWangInterview.topics.length) return saved;
+    } catch {}
+    return 1;
+  });
+
   // 浏览模式：'contrast'（左右对照精读，默认）或 'full'（全篇通读）
   const [viewMode, setViewMode] = useState('contrast');
 
@@ -126,7 +136,15 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   const [activeSliceIdx, setActiveSliceIdx] = useState(0);
 
   // 精读人物与人物下拉浮层
-  const [activeFigureId, setActiveFigureId] = useState('justin-sun');
+  const [activeFigureId, setActiveFigureId] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ink_podcast_active_figure');
+      if (saved && AVAILABLE_FIGURES.some(f => f.id === saved && f.active)) {
+        return saved;
+      }
+    } catch {}
+    return 'justin-sun';
+  });
   const [isFigureMenuOpen, setIsFigureMenuOpen] = useState(false);
   const figureDropdownRef = useRef(null);
 
@@ -192,6 +210,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   const handleSwitchSeries = seriesKey => {
     setActiveSeries(seriesKey);
     localStorage.setItem('ink_podcast_active_series', seriesKey);
+    const targetFigId = seriesKey === 'muse-2026' ? 'alex-wang' : 'justin-sun';
+    setActiveFigureId(targetFigId);
+    localStorage.setItem('ink_podcast_active_figure', targetFigId);
     setActiveSliceIdx(0);
     setIsCatalogOpen(false);
     if (contentRef.current) {
@@ -217,13 +238,30 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     return wealthFreedomTopics.find(t => t.id === activeWfTopicId) || wealthFreedomTopics[0];
   }, [activeWfTopicId]);
 
-  const activeTopic = activeSeries === 'alan-2026' ? currentAlanTopic : currentWfTopic;
+  const currentMuseTopic = useMemo(() => {
+    return zuckWangInterview.topics.find(t => t.id === activeMuseTopicId) || zuckWangInterview.topics[0];
+  }, [activeMuseTopicId]);
+
+  const activeTopic = activeSeries === 'muse-2026'
+    ? currentMuseTopic
+    : activeSeries === 'alan-2026'
+    ? currentAlanTopic
+    : currentWfTopic;
 
   // 过滤后的目录列表
   const filteredAlanTopics = useMemo(() => {
     if (!searchQuery) return alanInterview.topics;
     const q = searchQuery.toLowerCase();
     return alanInterview.topics.filter(t => 
+      t.title.toLowerCase().includes(q) ||
+      (t.core && t.core.toLowerCase().includes(q))
+    );
+  }, [searchQuery]);
+
+  const filteredMuseTopics = useMemo(() => {
+    if (!searchQuery) return zuckWangInterview.topics;
+    const q = searchQuery.toLowerCase();
+    return zuckWangInterview.topics.filter(t => 
       t.title.toLowerCase().includes(q) ||
       (t.core && t.core.toLowerCase().includes(q))
     );
@@ -256,6 +294,16 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     }
   };
 
+  const handleSelectMuseTopic = topicId => {
+    setActiveMuseTopicId(topicId);
+    localStorage.setItem('ink_muse_last_topic', topicId);
+    setActiveSliceIdx(0);
+    setIsCatalogOpen(false);
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const handleSelectWfTopic = topicId => {
     setActiveWfTopicId(topicId);
     localStorage.setItem('ink_wf_last_topic', topicId);
@@ -270,6 +318,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   const currentSlices = useMemo(() => {
     if (!activeTopic) return [];
     const isAlan = activeSeries === 'alan-2026';
+    const isMuse = activeSeries === 'muse-2026';
     return (activeTopic.segments || []).map((seg, idx) => ({
       id: idx + 1,
       tag: `切片 0${idx + 1} · 核心论点剖析`,
@@ -281,13 +330,19 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       hook: seg.hook,
       originalQuoteList: seg.quote || [],
       originalQuote: (seg.quote || []).join('\n\n'),
-      timeBadge: isAlan
+      timeBadge: isMuse
+        ? `🎙️ 扎克伯格 × Alex · ${seg.time_start || '0:00'} - ${seg.time_end || ''} 原声`
+        : isAlan
         ? `🎙️ 孙宇晨 · ${seg.time_start || '0:00'} - ${seg.time_end || ''} 原声`
         : `🎙️ 孙宇晨 · ${seg.time || ''} 原声`,
-      sliceKey: isAlan
+      sliceKey: isMuse
+        ? `muse-t${activeTopic.id}-s${idx + 1}`
+        : isAlan
         ? `alan-t${activeTopic.id}-s${idx + 1}`
         : `wf-t${activeTopic.id}-s${idx + 1}`,
-      sourceHint: isAlan
+      sourceHint: isMuse
+        ? `出自《扎克伯格 × Alexandr Wang｜Muse 与千亿美元的 AI 赌注》专题 0${activeTopic.id} · ${activeTopic.title}`
+        : isAlan
         ? `出自《孙宇晨 × 邵艾伦｜年轻人如何抓住AI时代的机会？》专题 0${activeTopic.id} · ${activeTopic.title}`
         : `出自《孙宇晨·财富自由革命之路》第 ${activeTopic.episodeNo} 期 · ${activeTopic.originalTitle}`,
       topicCore: activeTopic.core,
@@ -299,7 +354,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   const formattedFullHtml = useMemo(() => {
     if (!activeTopic) return '';
     let md = `# ${activeTopic.episodeNo ? `第 ${activeTopic.episodeNo} 期　` : ''}${activeTopic.title}\n\n`;
-    if (activeSeries === 'alan-2026') {
+    if (activeSeries === 'muse-2026') {
+      md += `*原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end} ｜ 扎克伯格 × Alexandr Wang*\n\n`;
+    } else if (activeSeries === 'alan-2026') {
       md += `*原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end} ｜ 孙宇晨 × 邵艾伦*\n\n`;
     } else {
       md += `*单元：${activeTopic.unit} ｜ 出自《${activeTopic.originalTitle}》*\n\n`;
@@ -368,7 +425,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   // 复制骨架卡片为引用文本
   const handleCopySliceCard = slice => {
     const noteObj = sliceNotes[slice.sliceKey];
-    const sourceTitle = activeSeries === 'alan-2026'
+    const sourceTitle = activeSeries === 'muse-2026'
+      ? `【Muse 与 AI 赌注 · 专题 0${activeTopic.id}】${activeTopic.title}`
+      : activeSeries === 'alan-2026'
       ? `【2026 访谈 · 专题 0${activeTopic.id}】${activeTopic.title}`
       : `【财富自由之路 · 第 ${activeTopic.episodeNo} 期】${activeTopic.title}`;
 
@@ -419,7 +478,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   };
 
   // 当前篇目的唯一键与状态
-  const currentEpisodeKey = activeSeries === 'alan-2026'
+  const currentEpisodeKey = activeSeries === 'muse-2026'
+    ? `muse-${activeMuseTopicId}`
+    : activeSeries === 'alan-2026'
     ? `alan-${activeAlanTopicId}`
     : `wf-${activeWfTopicId}`;
   const isCurrentRead = readEpisodeIds.includes(currentEpisodeKey);
@@ -428,6 +489,14 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   const alanStats = useMemo(() => {
     const total = alanInterview.topics.length;
     const completed = alanInterview.topics.filter(t => readEpisodeIds.includes(`alan-${t.id}`)).length;
+    const percent = Math.round((completed / total) * 100);
+    return { completed, total, percent, isAllDone: completed === total && total > 0 };
+  }, [readEpisodeIds]);
+
+  // 扎克伯格 × Alexandr Wang 访谈进度统计 (共 7 专题)
+  const museStats = useMemo(() => {
+    const total = zuckWangInterview.topics.length;
+    const completed = zuckWangInterview.topics.filter(t => readEpisodeIds.includes(`muse-${t.id}`)).length;
     const percent = Math.round((completed / total) * 100);
     return { completed, total, percent, isAllDone: completed === total && total > 0 };
   }, [readEpisodeIds]);
@@ -441,31 +510,41 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   }, [readEpisodeIds]);
 
   // 当前激活系列的进度统计
-  const currentStats = activeSeries === 'alan-2026' ? alanStats : classicStats;
+  const currentStats = activeSeries === 'muse-2026'
+    ? museStats
+    : activeSeries === 'alan-2026'
+    ? alanStats
+    : classicStats;
   const currentUnit = '专题';
 
   // 翻页导航控制
   const prevTopic = useMemo(() => {
-    if (activeSeries === 'alan-2026') {
+    if (activeSeries === 'muse-2026') {
+      return activeMuseTopicId > 1 ? zuckWangInterview.topics[activeMuseTopicId - 2] : null;
+    } else if (activeSeries === 'alan-2026') {
       return activeAlanTopicId > 1 ? alanInterview.topics[activeAlanTopicId - 2] : null;
     } else {
       const idx = wealthFreedomTopics.findIndex(t => t.id === activeWfTopicId);
       return idx > 0 ? wealthFreedomTopics[idx - 1] : null;
     }
-  }, [activeSeries, activeAlanTopicId, activeWfTopicId]);
+  }, [activeSeries, activeMuseTopicId, activeAlanTopicId, activeWfTopicId]);
 
   const nextTopic = useMemo(() => {
-    if (activeSeries === 'alan-2026') {
+    if (activeSeries === 'muse-2026') {
+      return activeMuseTopicId < zuckWangInterview.topics.length ? zuckWangInterview.topics[activeMuseTopicId] : null;
+    } else if (activeSeries === 'alan-2026') {
       return activeAlanTopicId < alanInterview.topics.length ? alanInterview.topics[activeAlanTopicId] : null;
     } else {
       const idx = wealthFreedomTopics.findIndex(t => t.id === activeWfTopicId);
       return idx < wealthFreedomTopics.length - 1 ? wealthFreedomTopics[idx + 1] : null;
     }
-  }, [activeSeries, activeAlanTopicId, activeWfTopicId]);
+  }, [activeSeries, activeMuseTopicId, activeAlanTopicId, activeWfTopicId]);
 
   const handleGotoPrevTopic = () => {
     if (!prevTopic) return;
-    if (activeSeries === 'alan-2026') {
+    if (activeSeries === 'muse-2026') {
+      handleSelectMuseTopic(prevTopic.id);
+    } else if (activeSeries === 'alan-2026') {
       handleSelectAlanTopic(prevTopic.id);
     } else {
       handleSelectWfTopic(prevTopic.id);
@@ -474,7 +553,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
 
   const handleGotoNextTopic = () => {
     if (!nextTopic) return;
-    if (activeSeries === 'alan-2026') {
+    if (activeSeries === 'muse-2026') {
+      handleSelectMuseTopic(nextTopic.id);
+    } else if (activeSeries === 'alan-2026') {
       handleSelectAlanTopic(nextTopic.id);
     } else {
       handleSelectWfTopic(nextTopic.id);
@@ -524,7 +605,15 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                         onClick={() => {
                           if (fig.active) {
                             setActiveFigureId(fig.id);
+                            localStorage.setItem('ink_podcast_active_figure', fig.id);
                             setIsFigureMenuOpen(false);
+                            if (fig.id === 'alex-wang') {
+                              handleSwitchSeries('muse-2026');
+                            } else if (fig.id === 'justin-sun') {
+                              if (activeSeries === 'muse-2026') {
+                                handleSwitchSeries('alan-2026');
+                              }
+                            }
                           }
                         }}
                       >
@@ -549,26 +638,41 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
 
             {/* 2. 系列切换胶囊组（带实时进度提示） */}
             <div className="contrast-series-capsule-group">
-              <button
-                type="button"
-                className={`contrast-series-chip ${activeSeries === 'alan-2026' ? 'active' : ''}`}
-                onClick={() => handleSwitchSeries('alan-2026')}
-                title={`2026 艾伦长访谈 · 已读 ${alanStats.completed}/${alanStats.total} 专题`}
-              >
-                <Sparkles size={12} className="text-amber-400" />
-                <span>艾伦长访谈</span>
-                <span className="contrast-chip-count">{alanStats.completed}/{alanStats.total}</span>
-              </button>
-              <button
-                type="button"
-                className={`contrast-series-chip ${activeSeries === 'wealth-freedom-154' ? 'active' : ''}`}
-                onClick={() => handleSwitchSeries('wealth-freedom-154')}
-                title={`财富自由之路 · 已读 ${classicStats.completed}/${classicStats.total} 专题`}
-              >
-                <Headphones size={12} />
-                <span>财富自由之路</span>
-                <span className="contrast-chip-count">{classicStats.completed}/{classicStats.total}</span>
-              </button>
+              {activeFigureId === 'alex-wang' ? (
+                <button
+                  type="button"
+                  className={`contrast-series-chip ${activeSeries === 'muse-2026' ? 'active' : ''}`}
+                  onClick={() => handleSwitchSeries('muse-2026')}
+                  title={`Muse 与千亿美元 AI 赌注 · 已读 ${museStats.completed}/${museStats.total} 专题`}
+                >
+                  <Sparkles size={12} className="text-amber-400" />
+                  <span>Muse 与 AI 赌注</span>
+                  <span className="contrast-chip-count">{museStats.completed}/{museStats.total}</span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className={`contrast-series-chip ${activeSeries === 'alan-2026' ? 'active' : ''}`}
+                    onClick={() => handleSwitchSeries('alan-2026')}
+                    title={`2026 艾伦长访谈 · 已读 ${alanStats.completed}/${alanStats.total} 专题`}
+                  >
+                    <Sparkles size={12} className="text-amber-400" />
+                    <span>艾伦长访谈</span>
+                    <span className="contrast-chip-count">{alanStats.completed}/{alanStats.total}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`contrast-series-chip ${activeSeries === 'wealth-freedom-154' ? 'active' : ''}`}
+                    onClick={() => handleSwitchSeries('wealth-freedom-154')}
+                    title={`财富自由之路 · 已读 ${classicStats.completed}/${classicStats.total} 专题`}
+                  >
+                    <Headphones size={12} />
+                    <span>财富自由之路</span>
+                    <span className="contrast-chip-count">{classicStats.completed}/{classicStats.total}</span>
+                  </button>
+                </>
+              )}
             </div>
 
             <span className="contrast-crumb-sep">/</span>
@@ -579,13 +683,13 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                 type="button"
                 className={`contrast-ctrl-btn episode-selector-btn ${isCatalogOpen ? 'active' : ''}`}
                 onClick={() => setIsCatalogOpen(!isCatalogOpen)}
-                title={activeSeries === 'alan-2026' ? '浏览与切换 7 个精读专题' : '浏览与切换 167 个精读专题'}
+                title={activeSeries === 'wealth-freedom-154' ? '浏览与切换 167 个精读专题' : '浏览与切换 7 个精读专题'}
               >
                 <BookOpen size={13} className="text-amber-400" />
                 <span className="contrast-btn-ep-title">
-                  {activeSeries === 'alan-2026'
-                    ? `专题 0${activeTopic.id} ${activeTopic.title}`
-                    : `#${activeTopic.episodeNo} ${activeTopic.title}`}
+                  {activeSeries === 'wealth-freedom-154'
+                    ? `#${activeTopic.episodeNo} ${activeTopic.title}`
+                    : `专题 0${activeTopic.id} ${activeTopic.title}`}
                 </span>
                 <span className="contrast-down-arrow">{isCatalogOpen ? '▲' : '▾'}</span>
               </button>
@@ -595,7 +699,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                 <div className="contrast-dropdown-panel animate-scale-up">
                   <div className="contrast-dd-header">
                     <span className="contrast-dd-title">
-                      {activeSeries === 'alan-2026'
+                      {activeSeries === 'muse-2026'
+                        ? `选读专题（已过 ${museStats.completed}/${museStats.total}）`
+                        : activeSeries === 'alan-2026'
                         ? `选读专题（已过 ${alanStats.completed}/${alanStats.total}）`
                         : `选读专题（已过 ${classicStats.completed}/${classicStats.total}）`}
                     </span>
@@ -613,7 +719,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                     <Search size={13} className="text-amber-400" />
                     <input
                       type="text"
-                      placeholder={activeSeries === 'alan-2026' ? '搜索专题名称、核心命题...' : '搜索专题、期号、命题...'}
+                      placeholder={activeSeries === 'wealth-freedom-154' ? '搜索专题、期号、命题...' : '搜索专题名称、核心命题...'}
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
                       className="contrast-dd-search-input"
@@ -648,7 +754,26 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
 
                   {/* 章节/专题列表流 */}
                   <div className="contrast-dd-list">
-                    {activeSeries === 'alan-2026' ? (
+                    {activeSeries === 'muse-2026' ? (
+                      filteredMuseTopics.map(t => {
+                        const isSelected = t.id === activeMuseTopicId;
+                        const isRead = readEpisodeIds.includes(`muse-${t.id}`);
+                        return (
+                          <div
+                            key={t.id}
+                            className={`contrast-dd-item ${isSelected ? 'selected' : ''} ${isRead ? 'is-read' : ''}`}
+                            onClick={() => handleSelectMuseTopic(t.id)}
+                          >
+                            <span className="contrast-dd-item-num">0{t.id}</span>
+                            <div className="contrast-dd-item-info">
+                              <span className="contrast-dd-item-title">{t.title}</span>
+                              <span className="contrast-dd-item-core">{t.core}</span>
+                            </div>
+                            {isRead && <span className="contrast-dd-read">✓ 已过</span>}
+                          </div>
+                        );
+                      })
+                    ) : activeSeries === 'alan-2026' ? (
                       filteredAlanTopics.map(t => {
                         const isSelected = t.id === activeAlanTopicId;
                         const isRead = readEpisodeIds.includes(`alan-${t.id}`);
@@ -790,11 +915,17 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       <section className="contrast-topic-hero animate-fade-in">
         <div className="contrast-topic-hero-header">
           <span className="contrast-topic-hero-badge">
-            {activeSeries === 'alan-2026'
-              ? `专题 0${activeTopic.id} ｜ 原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end}`
-              : `第 ${activeTopic.episodeNo} 期 · ${activeTopic.unit}`}
+            {activeSeries === 'wealth-freedom-154'
+              ? `第 ${activeTopic.episodeNo} 期 · ${activeTopic.unit}`
+              : `专题 0${activeTopic.id} ｜ 原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end}`}
           </span>
-          <span className="contrast-topic-hero-speaker">🎙️ 孙宇晨 × 邵艾伦</span>
+          <span className="contrast-topic-hero-speaker">
+            {activeSeries === 'muse-2026'
+              ? '🎙️ 扎克伯格 × Alexandr Wang'
+              : activeSeries === 'alan-2026'
+              ? '🎙️ 孙宇晨 × 邵艾伦'
+              : '🎙️ 孙宇晨（录音原声）'}
+          </span>
         </div>
         <h2 className="contrast-topic-hero-title">{activeTopic.title}</h2>
         <div className="contrast-topic-hero-core">
@@ -853,7 +984,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                   <section className="contrast-pane contrast-pane-left">
                     <div className="contrast-slice-tag-row">
                       <span className="contrast-left-header-label">
-                        {activeSeries === 'alan-2026'
+                        {activeSeries === 'muse-2026'
+                          ? '对照相关原声 · 🎙️ 扎克伯格 × Alexandr Wang'
+                          : activeSeries === 'alan-2026'
                           ? '对照相关原声 · 🎙️ 孙宇晨（对话邵艾伦）'
                           : `对照相关原声 · 🎙️ 孙宇晨（第 ${activeTopic.episodeNo} 期）`}
                       </span>
@@ -1048,9 +1181,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
           <div className="contrast-full-article-wrap">
             <div className="contrast-full-header">
               <span className="contrast-full-ep-id">
-                {activeSeries === 'alan-2026'
-                  ? `专题 0${activeTopic.id} ｜ 原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end}`
-                  : `第 ${activeTopic.episodeNo} 期 · ${activeTopic.unit}`}
+                {activeSeries === 'wealth-freedom-154'
+                  ? `第 ${activeTopic.episodeNo} 期 · ${activeTopic.unit}`
+                  : `专题 0${activeTopic.id} ｜ 原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end}`}
               </span>
               <h2 className="contrast-full-h1">
                 {activeTopic.title}
@@ -1081,9 +1214,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
               <span>上一个专题</span>
             </div>
             <div className="contrast-footer-nav-title">
-              {activeSeries === 'alan-2026'
-                ? `专题 0${prevTopic.id} · ${prevTopic.title}`
-                : `#${prevTopic.episodeNo} ${prevTopic.title}`}
+              {activeSeries === 'wealth-freedom-154'
+                ? `#${prevTopic.episodeNo} ${prevTopic.title}`
+                : `专题 0${prevTopic.id} · ${prevTopic.title}`}
             </div>
           </button>
         ) : <div />}
@@ -1099,9 +1232,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
               <ChevronRight size={14} />
             </div>
             <div className="contrast-footer-nav-title">
-              {activeSeries === 'alan-2026'
-                ? `专题 0${nextTopic.id} · ${nextTopic.title}`
-                : `#${nextTopic.episodeNo} ${nextTopic.title}`}
+              {activeSeries === 'wealth-freedom-154'
+                ? `#${nextTopic.episodeNo} ${nextTopic.title}`
+                : `专题 0${nextTopic.id} · ${nextTopic.title}`}
             </div>
           </button>
         ) : <div />}
