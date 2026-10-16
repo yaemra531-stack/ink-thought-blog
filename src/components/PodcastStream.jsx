@@ -20,6 +20,8 @@ import {
 import alanInterview from '../content/alanInterview.json';
 import wealthFreedomRaw from '../content/wealthFreedomCurated.json';
 import zuckWangInterview from '../content/zuckWangInterview.json';
+import lixiangInterviewEp02 from '../content/lixiangInterviewEp02.json';
+import lixiangInterviewEp03 from '../content/lixiangInterviewEp03.json';
 import { renderMarkdown } from '../utils/markdownParser';
 
 const FONT_SIZES = ['sm', 'base', 'lg', 'xl'];
@@ -67,6 +69,15 @@ const AVAILABLE_FIGURES = [
     desc: 'AGI 演进路线、创业哲学与尺度定律思考',
     countBadge: '筹备中',
     active: false,
+  },
+  {
+    id: 'li-xiang',
+    name: '李想',
+    avatar: '🚘',
+    title: '理想汽车创始人、董事长兼 CEO',
+    desc: '李想 × 罗永浩 访谈精读（25年创业之路 + AI与具身生活）',
+    countBadge: '17 篇收录',
+    active: true,
   },
 ];
 
@@ -125,6 +136,24 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     try {
       const saved = parseInt(localStorage.getItem('ink_muse_last_topic'), 10);
       if (saved >= 1 && saved <= zuckWangInterview.topics.length) return saved;
+    } catch {}
+    return 1;
+  });
+
+  // 李想 × 罗永浩 访谈第 002 期当前专题 ID（1 - 9）
+  const [activeLi02TopicId, setActiveLi02TopicId] = useState(() => {
+    try {
+      const saved = parseInt(localStorage.getItem('ink_li02_last_topic'), 10);
+      if (saved >= 1 && saved <= lixiangInterviewEp02.topics.length) return saved;
+    } catch {}
+    return 1;
+  });
+
+  // 李想 × 罗永浩 访谈第 003 期当前专题 ID（1 - 8）
+  const [activeLi03TopicId, setActiveLi03TopicId] = useState(() => {
+    try {
+      const saved = parseInt(localStorage.getItem('ink_li03_last_topic'), 10);
+      if (saved >= 1 && saved <= lixiangInterviewEp03.topics.length) return saved;
     } catch {}
     return 1;
   });
@@ -210,7 +239,11 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   const handleSwitchSeries = seriesKey => {
     setActiveSeries(seriesKey);
     localStorage.setItem('ink_podcast_active_series', seriesKey);
-    const targetFigId = seriesKey === 'muse-2026' ? 'alex-wang' : 'justin-sun';
+    const targetFigId = seriesKey.startsWith('lixiang-')
+      ? 'li-xiang'
+      : seriesKey === 'muse-2026'
+      ? 'alex-wang'
+      : 'justin-sun';
     setActiveFigureId(targetFigId);
     localStorage.setItem('ink_podcast_active_figure', targetFigId);
     setActiveSliceIdx(0);
@@ -242,7 +275,19 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     return zuckWangInterview.topics.find(t => t.id === activeMuseTopicId) || zuckWangInterview.topics[0];
   }, [activeMuseTopicId]);
 
-  const activeTopic = activeSeries === 'muse-2026'
+  const currentLi02Topic = useMemo(() => {
+    return lixiangInterviewEp02.topics.find(t => t.id === activeLi02TopicId) || lixiangInterviewEp02.topics[0];
+  }, [activeLi02TopicId]);
+
+  const currentLi03Topic = useMemo(() => {
+    return lixiangInterviewEp03.topics.find(t => t.id === activeLi03TopicId) || lixiangInterviewEp03.topics[0];
+  }, [activeLi03TopicId]);
+
+  const activeTopic = activeSeries === 'lixiang-ep02'
+    ? currentLi02Topic
+    : activeSeries === 'lixiang-ep03'
+    ? currentLi03Topic
+    : activeSeries === 'muse-2026'
     ? currentMuseTopic
     : activeSeries === 'alan-2026'
     ? currentAlanTopic
@@ -262,6 +307,24 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     if (!searchQuery) return zuckWangInterview.topics;
     const q = searchQuery.toLowerCase();
     return zuckWangInterview.topics.filter(t => 
+      t.title.toLowerCase().includes(q) ||
+      (t.core && t.core.toLowerCase().includes(q))
+    );
+  }, [searchQuery]);
+
+  const filteredLi02Topics = useMemo(() => {
+    if (!searchQuery) return lixiangInterviewEp02.topics;
+    const q = searchQuery.toLowerCase();
+    return lixiangInterviewEp02.topics.filter(t => 
+      t.title.toLowerCase().includes(q) ||
+      (t.core && t.core.toLowerCase().includes(q))
+    );
+  }, [searchQuery]);
+
+  const filteredLi03Topics = useMemo(() => {
+    if (!searchQuery) return lixiangInterviewEp03.topics;
+    const q = searchQuery.toLowerCase();
+    return lixiangInterviewEp03.topics.filter(t => 
       t.title.toLowerCase().includes(q) ||
       (t.core && t.core.toLowerCase().includes(q))
     );
@@ -304,6 +367,26 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
     }
   };
 
+  const handleSelectLi02Topic = topicId => {
+    setActiveLi02TopicId(topicId);
+    localStorage.setItem('ink_li02_last_topic', topicId);
+    setActiveSliceIdx(0);
+    setIsCatalogOpen(false);
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleSelectLi03Topic = topicId => {
+    setActiveLi03TopicId(topicId);
+    localStorage.setItem('ink_li03_last_topic', topicId);
+    setActiveSliceIdx(0);
+    setIsCatalogOpen(false);
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const handleSelectWfTopic = topicId => {
     setActiveWfTopicId(topicId);
     localStorage.setItem('ink_wf_last_topic', topicId);
@@ -317,6 +400,8 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   // 构建当前专题的双栏切片数据
   const currentSlices = useMemo(() => {
     if (!activeTopic) return [];
+    const isLi02 = activeSeries === 'lixiang-ep02';
+    const isLi03 = activeSeries === 'lixiang-ep03';
     const isAlan = activeSeries === 'alan-2026';
     const isMuse = activeSeries === 'muse-2026';
     return (activeTopic.segments || []).map((seg, idx) => ({
@@ -330,17 +415,27 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       hook: seg.hook,
       originalQuoteList: seg.quote || [],
       originalQuote: (seg.quote || []).join('\n\n'),
-      timeBadge: isMuse
+      timeBadge: (isLi02 || isLi03)
+        ? `🎙️ 李想 × 罗永浩 · ${seg.time_start || '0:00'} - ${seg.time_end || ''} 原声`
+        : isMuse
         ? `🎙️ 扎克伯格 × Alex · ${seg.time_start || '0:00'} - ${seg.time_end || ''} 原声`
         : isAlan
         ? `🎙️ 孙宇晨 · ${seg.time_start || '0:00'} - ${seg.time_end || ''} 原声`
         : `🎙️ 孙宇晨 · ${seg.time || ''} 原声`,
-      sliceKey: isMuse
+      sliceKey: isLi02
+        ? `li02-t${activeTopic.id}-s${idx + 1}`
+        : isLi03
+        ? `li03-t${activeTopic.id}-s${idx + 1}`
+        : isMuse
         ? `muse-t${activeTopic.id}-s${idx + 1}`
         : isAlan
         ? `alan-t${activeTopic.id}-s${idx + 1}`
         : `wf-t${activeTopic.id}-s${idx + 1}`,
-      sourceHint: isMuse
+      sourceHint: isLi02
+        ? `出自《第 002 期｜李想 × 罗永浩：25 年创业之路》专题 0${activeTopic.id} · ${activeTopic.title}`
+        : isLi03
+        ? `出自《第 003 期｜李想 × 罗永浩：让普通人也过上富豪的生活》专题 0${activeTopic.id} · ${activeTopic.title}`
+        : isMuse
         ? `出自《扎克伯格 × Alexandr Wang｜Muse 与千亿美元的 AI 赌注》专题 0${activeTopic.id} · ${activeTopic.title}`
         : isAlan
         ? `出自《孙宇晨 × 邵艾伦｜年轻人如何抓住AI时代的机会？》专题 0${activeTopic.id} · ${activeTopic.title}`
@@ -354,7 +449,11 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   const formattedFullHtml = useMemo(() => {
     if (!activeTopic) return '';
     let md = `# ${activeTopic.episodeNo ? `第 ${activeTopic.episodeNo} 期　` : ''}${activeTopic.title}\n\n`;
-    if (activeSeries === 'muse-2026') {
+    if (activeSeries === 'lixiang-ep02') {
+      md += `*原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end} ｜ 李想 × 罗永浩*\n\n`;
+    } else if (activeSeries === 'lixiang-ep03') {
+      md += `*原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end} ｜ 李想 × 罗永浩*\n\n`;
+    } else if (activeSeries === 'muse-2026') {
       md += `*原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end} ｜ 扎克伯格 × Alexandr Wang*\n\n`;
     } else if (activeSeries === 'alan-2026') {
       md += `*原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end} ｜ 孙宇晨 × 邵艾伦*\n\n`;
@@ -425,7 +524,11 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   // 复制骨架卡片为引用文本
   const handleCopySliceCard = slice => {
     const noteObj = sliceNotes[slice.sliceKey];
-    const sourceTitle = activeSeries === 'muse-2026'
+    const sourceTitle = activeSeries === 'lixiang-ep02'
+      ? `【李想创业25年 · 专题 0${activeTopic.id}】${activeTopic.title}`
+      : activeSeries === 'lixiang-ep03'
+      ? `【李想AI与富豪生活 · 专题 0${activeTopic.id}】${activeTopic.title}`
+      : activeSeries === 'muse-2026'
       ? `【Muse 与 AI 赌注 · 专题 0${activeTopic.id}】${activeTopic.title}`
       : activeSeries === 'alan-2026'
       ? `【2026 访谈 · 专题 0${activeTopic.id}】${activeTopic.title}`
@@ -478,12 +581,32 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   };
 
   // 当前篇目的唯一键与状态
-  const currentEpisodeKey = activeSeries === 'muse-2026'
+  const currentEpisodeKey = activeSeries === 'lixiang-ep02'
+    ? `li02-${activeLi02TopicId}`
+    : activeSeries === 'lixiang-ep03'
+    ? `li03-${activeLi03TopicId}`
+    : activeSeries === 'muse-2026'
     ? `muse-${activeMuseTopicId}`
     : activeSeries === 'alan-2026'
     ? `alan-${activeAlanTopicId}`
     : `wf-${activeWfTopicId}`;
   const isCurrentRead = readEpisodeIds.includes(currentEpisodeKey);
+
+  // 李想 × 罗永浩 访谈第 002 期进度统计 (共 9 专题)
+  const li02Stats = useMemo(() => {
+    const total = lixiangInterviewEp02.topics.length;
+    const completed = lixiangInterviewEp02.topics.filter(t => readEpisodeIds.includes(`li02-${t.id}`)).length;
+    const percent = Math.round((completed / total) * 100);
+    return { completed, total, percent, isAllDone: completed === total && total > 0 };
+  }, [readEpisodeIds]);
+
+  // 李想 × 罗永浩 访谈第 003 期进度统计 (共 8 专题)
+  const li03Stats = useMemo(() => {
+    const total = lixiangInterviewEp03.topics.length;
+    const completed = lixiangInterviewEp03.topics.filter(t => readEpisodeIds.includes(`li03-${t.id}`)).length;
+    const percent = Math.round((completed / total) * 100);
+    return { completed, total, percent, isAllDone: completed === total && total > 0 };
+  }, [readEpisodeIds]);
 
   // 艾伦访谈进度统计 (共 7 专题)
   const alanStats = useMemo(() => {
@@ -510,7 +633,11 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
   }, [readEpisodeIds]);
 
   // 当前激活系列的进度统计
-  const currentStats = activeSeries === 'muse-2026'
+  const currentStats = activeSeries === 'lixiang-ep02'
+    ? li02Stats
+    : activeSeries === 'lixiang-ep03'
+    ? li03Stats
+    : activeSeries === 'muse-2026'
     ? museStats
     : activeSeries === 'alan-2026'
     ? alanStats
@@ -519,7 +646,11 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
 
   // 翻页导航控制
   const prevTopic = useMemo(() => {
-    if (activeSeries === 'muse-2026') {
+    if (activeSeries === 'lixiang-ep02') {
+      return activeLi02TopicId > 1 ? lixiangInterviewEp02.topics[activeLi02TopicId - 2] : null;
+    } else if (activeSeries === 'lixiang-ep03') {
+      return activeLi03TopicId > 1 ? lixiangInterviewEp03.topics[activeLi03TopicId - 2] : null;
+    } else if (activeSeries === 'muse-2026') {
       return activeMuseTopicId > 1 ? zuckWangInterview.topics[activeMuseTopicId - 2] : null;
     } else if (activeSeries === 'alan-2026') {
       return activeAlanTopicId > 1 ? alanInterview.topics[activeAlanTopicId - 2] : null;
@@ -527,10 +658,14 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       const idx = wealthFreedomTopics.findIndex(t => t.id === activeWfTopicId);
       return idx > 0 ? wealthFreedomTopics[idx - 1] : null;
     }
-  }, [activeSeries, activeMuseTopicId, activeAlanTopicId, activeWfTopicId]);
+  }, [activeSeries, activeLi02TopicId, activeLi03TopicId, activeMuseTopicId, activeAlanTopicId, activeWfTopicId]);
 
   const nextTopic = useMemo(() => {
-    if (activeSeries === 'muse-2026') {
+    if (activeSeries === 'lixiang-ep02') {
+      return activeLi02TopicId < lixiangInterviewEp02.topics.length ? lixiangInterviewEp02.topics[activeLi02TopicId] : null;
+    } else if (activeSeries === 'lixiang-ep03') {
+      return activeLi03TopicId < lixiangInterviewEp03.topics.length ? lixiangInterviewEp03.topics[activeLi03TopicId] : null;
+    } else if (activeSeries === 'muse-2026') {
       return activeMuseTopicId < zuckWangInterview.topics.length ? zuckWangInterview.topics[activeMuseTopicId] : null;
     } else if (activeSeries === 'alan-2026') {
       return activeAlanTopicId < alanInterview.topics.length ? alanInterview.topics[activeAlanTopicId] : null;
@@ -538,11 +673,15 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
       const idx = wealthFreedomTopics.findIndex(t => t.id === activeWfTopicId);
       return idx < wealthFreedomTopics.length - 1 ? wealthFreedomTopics[idx + 1] : null;
     }
-  }, [activeSeries, activeMuseTopicId, activeAlanTopicId, activeWfTopicId]);
+  }, [activeSeries, activeLi02TopicId, activeLi03TopicId, activeMuseTopicId, activeAlanTopicId, activeWfTopicId]);
 
   const handleGotoPrevTopic = () => {
     if (!prevTopic) return;
-    if (activeSeries === 'muse-2026') {
+    if (activeSeries === 'lixiang-ep02') {
+      handleSelectLi02Topic(prevTopic.id);
+    } else if (activeSeries === 'lixiang-ep03') {
+      handleSelectLi03Topic(prevTopic.id);
+    } else if (activeSeries === 'muse-2026') {
       handleSelectMuseTopic(prevTopic.id);
     } else if (activeSeries === 'alan-2026') {
       handleSelectAlanTopic(prevTopic.id);
@@ -553,7 +692,11 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
 
   const handleGotoNextTopic = () => {
     if (!nextTopic) return;
-    if (activeSeries === 'muse-2026') {
+    if (activeSeries === 'lixiang-ep02') {
+      handleSelectLi02Topic(nextTopic.id);
+    } else if (activeSeries === 'lixiang-ep03') {
+      handleSelectLi03Topic(nextTopic.id);
+    } else if (activeSeries === 'muse-2026') {
       handleSelectMuseTopic(nextTopic.id);
     } else if (activeSeries === 'alan-2026') {
       handleSelectAlanTopic(nextTopic.id);
@@ -607,10 +750,12 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                             setActiveFigureId(fig.id);
                             localStorage.setItem('ink_podcast_active_figure', fig.id);
                             setIsFigureMenuOpen(false);
-                            if (fig.id === 'alex-wang') {
+                            if (fig.id === 'li-xiang') {
+                              handleSwitchSeries('lixiang-ep02');
+                            } else if (fig.id === 'alex-wang') {
                               handleSwitchSeries('muse-2026');
                             } else if (fig.id === 'justin-sun') {
-                              if (activeSeries === 'muse-2026') {
+                              if (activeSeries === 'muse-2026' || activeSeries.startsWith('lixiang-')) {
                                 handleSwitchSeries('alan-2026');
                               }
                             }
@@ -638,7 +783,30 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
 
             {/* 2. 系列切换胶囊组（带实时进度提示） */}
             <div className="contrast-series-capsule-group">
-              {activeFigureId === 'alex-wang' ? (
+              {activeFigureId === 'li-xiang' ? (
+                <>
+                  <button
+                    type="button"
+                    className={`contrast-series-chip ${activeSeries === 'lixiang-ep02' ? 'active' : ''}`}
+                    onClick={() => handleSwitchSeries('lixiang-ep02')}
+                    title={`第 002 期 · 25 年创业之路 · 已读 ${li02Stats.completed}/${li02Stats.total} 专题`}
+                  >
+                    <Sparkles size={12} className="text-amber-400" />
+                    <span>25 年创业之路</span>
+                    <span className="contrast-chip-count">{li02Stats.completed}/{li02Stats.total}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`contrast-series-chip ${activeSeries === 'lixiang-ep03' ? 'active' : ''}`}
+                    onClick={() => handleSwitchSeries('lixiang-ep03')}
+                    title={`第 003 期 · 让普通人过上富豪生活 · 已读 ${li03Stats.completed}/${li03Stats.total} 专题`}
+                  >
+                    <Sparkles size={12} className="text-amber-400" />
+                    <span>AI与富豪生活</span>
+                    <span className="contrast-chip-count">{li03Stats.completed}/{li03Stats.total}</span>
+                  </button>
+                </>
+              ) : activeFigureId === 'alex-wang' ? (
                 <button
                   type="button"
                   className={`contrast-series-chip ${activeSeries === 'muse-2026' ? 'active' : ''}`}
@@ -683,7 +851,7 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                 type="button"
                 className={`contrast-ctrl-btn episode-selector-btn ${isCatalogOpen ? 'active' : ''}`}
                 onClick={() => setIsCatalogOpen(!isCatalogOpen)}
-                title={activeSeries === 'wealth-freedom-154' ? '浏览与切换 167 个精读专题' : '浏览与切换 7 个精读专题'}
+                title={activeSeries === 'wealth-freedom-154' ? '浏览与切换 167 个精读专题' : `浏览与切换 ${activeStats.total} 个精读专题`}
               >
                 <BookOpen size={13} className="text-amber-400" />
                 <span className="contrast-btn-ep-title">
@@ -699,7 +867,11 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                 <div className="contrast-dropdown-panel animate-scale-up">
                   <div className="contrast-dd-header">
                     <span className="contrast-dd-title">
-                      {activeSeries === 'muse-2026'
+                      {activeSeries === 'lixiang-ep02'
+                        ? `选读专题（已过 ${li02Stats.completed}/${li02Stats.total}）`
+                        : activeSeries === 'lixiang-ep03'
+                        ? `选读专题（已过 ${li03Stats.completed}/${li03Stats.total}）`
+                        : activeSeries === 'muse-2026'
                         ? `选读专题（已过 ${museStats.completed}/${museStats.total}）`
                         : activeSeries === 'alan-2026'
                         ? `选读专题（已过 ${alanStats.completed}/${alanStats.total}）`
@@ -754,7 +926,45 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
 
                   {/* 章节/专题列表流 */}
                   <div className="contrast-dd-list">
-                    {activeSeries === 'muse-2026' ? (
+                    {activeSeries === 'lixiang-ep02' ? (
+                      filteredLi02Topics.map(t => {
+                        const isSelected = t.id === activeLi02TopicId;
+                        const isRead = readEpisodeIds.includes(`li02-${t.id}`);
+                        return (
+                          <div
+                            key={t.id}
+                            className={`contrast-dd-item ${isSelected ? 'selected' : ''} ${isRead ? 'is-read' : ''}`}
+                            onClick={() => handleSelectLi02Topic(t.id)}
+                          >
+                            <span className="contrast-dd-item-num">0{t.id}</span>
+                            <div className="contrast-dd-item-info">
+                              <span className="contrast-dd-item-title">{t.title}</span>
+                              <span className="contrast-dd-item-core">{t.core}</span>
+                            </div>
+                            {isRead && <span className="contrast-dd-read">✓ 已过</span>}
+                          </div>
+                        );
+                      })
+                    ) : activeSeries === 'lixiang-ep03' ? (
+                      filteredLi03Topics.map(t => {
+                        const isSelected = t.id === activeLi03TopicId;
+                        const isRead = readEpisodeIds.includes(`li03-${t.id}`);
+                        return (
+                          <div
+                            key={t.id}
+                            className={`contrast-dd-item ${isSelected ? 'selected' : ''} ${isRead ? 'is-read' : ''}`}
+                            onClick={() => handleSelectLi03Topic(t.id)}
+                          >
+                            <span className="contrast-dd-item-num">0{t.id}</span>
+                            <div className="contrast-dd-item-info">
+                              <span className="contrast-dd-item-title">{t.title}</span>
+                              <span className="contrast-dd-item-core">{t.core}</span>
+                            </div>
+                            {isRead && <span className="contrast-dd-read">✓ 已过</span>}
+                          </div>
+                        );
+                      })
+                    ) : activeSeries === 'muse-2026' ? (
                       filteredMuseTopics.map(t => {
                         const isSelected = t.id === activeMuseTopicId;
                         const isRead = readEpisodeIds.includes(`muse-${t.id}`);
@@ -920,7 +1130,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
               : `专题 0${activeTopic.id} ｜ 原访谈约 ${activeTopic.time_start} – ${activeTopic.time_end}`}
           </span>
           <span className="contrast-topic-hero-speaker">
-            {activeSeries === 'muse-2026'
+            {activeSeries === 'lixiang-ep02' || activeSeries === 'lixiang-ep03'
+              ? '🎙️ 李想 × 罗永浩'
+              : activeSeries === 'muse-2026'
               ? '🎙️ 扎克伯格 × Alexandr Wang'
               : activeSeries === 'alan-2026'
               ? '🎙️ 孙宇晨 × 邵艾伦'
@@ -984,7 +1196,9 @@ export default function PodcastStream({ isAuthor, onToggleAuthorMode }) {
                   <section className="contrast-pane contrast-pane-left">
                     <div className="contrast-slice-tag-row">
                       <span className="contrast-left-header-label">
-                        {activeSeries === 'muse-2026'
+                        {activeSeries === 'lixiang-ep02' || activeSeries === 'lixiang-ep03'
+                          ? '对照相关原声 · 🎙️ 李想 × 罗永浩'
+                          : activeSeries === 'muse-2026'
                           ? '对照相关原声 · 🎙️ 扎克伯格 × Alexandr Wang'
                           : activeSeries === 'alan-2026'
                           ? '对照相关原声 · 🎙️ 孙宇晨（对话邵艾伦）'
